@@ -1,0 +1,225 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Enertech{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    {% block extra_css %}{% endblock %}
+    {% block leaflet_css %}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    {% endblock %}
+</head>
+
+<body class="{% if user.is_authenticated %}logged{% endif %}">
+
+<!-- ══════════════════════════════════════
+     TOAST CONTAINER (global)
+     ══════════════════════════════════════ -->
+<div id="toastContainer" class="toast-container"></div>
+
+<div class="container">
+
+    {% if user.is_authenticated %}
+    <!-- ══════════════════════════════════════
+         SIDEBAR
+         ══════════════════════════════════════ -->
+    <aside class="sidebar" id="sidebar">
+
+        <!-- Logo -->
+        <div class="sb-logo">
+            <div class="sb-logo-icon">⚡</div>
+            <span class="sb-logo-text">Enertech</span>
+            <!-- Botão fechar sidebar no mobile -->
+            <button class="sb-close-btn" onclick="toggleSidebar()" aria-label="Fechar menu">✕</button>
+        </div>
+
+        <!-- Stats rápidas -->
+        <div class="sb-section">
+            <div class="sb-section-label">Visão geral</div>
+            <div class="sb-stats-grid">
+                <div class="sb-stat-card">
+                    <span class="sb-stat-val" id="sbStatTotal">—</span>
+                    <span class="sb-stat-sub">postos</span>
+                </div>
+                <div class="sb-stat-card sb-stat-card--green">
+                    <span class="sb-stat-val" id="sbStatLivres">—</span>
+                    <span class="sb-stat-sub">com vagas</span>
+                </div>
+                <div class="sb-stat-card sb-stat-card--red">
+                    <span class="sb-stat-val" id="sbStatOcupados">—</span>
+                    <span class="sb-stat-sub">ocupados</span>
+                </div>
+                <div class="sb-stat-card">
+                    <span class="sb-stat-val" id="sbStatMW">—</span>
+                    <span class="sb-stat-sub">MW total</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="sb-section sb-filters-section">
+            <div class="sb-section-label">
+                Filtros
+                <button class="sb-clear-btn" onclick="resetarFiltros()">limpar</button>
+            </div>
+
+            <!-- Busca -->
+            <div class="sb-filter-block">
+                <input type="text" id="inputBusca" class="sb-input"
+                       onkeyup="aplicarFiltros()"
+                       placeholder="Buscar por nome...">
+            </div>
+
+            <!-- Preço kWh -->
+            <div class="sb-filter-block">
+                <div class="sb-filter-label">
+                    Preço máx./kWh
+                    <span class="sb-filter-val" id="labelKwh">R$ 5,00</span>
+                </div>
+                <input type="range" id="inputKwh" class="sb-range"
+                       min="0" max="5" step="0.05" value="5"
+                       oninput="aplicarFiltros()">
+            </div>
+
+            <!-- Potência -->
+            <div class="sb-filter-block">
+                <div class="sb-filter-label">
+                    Potência mínima
+                    <span class="sb-filter-val" id="labelKw">0 kW</span>
+                </div>
+                <input type="range" id="inputKw" class="sb-range"
+                       min="0" max="350" step="10" value="0"
+                       oninput="aplicarFiltros()">
+            </div>
+
+            <!-- Disponibilidade -->
+            <div class="sb-filter-block">
+                <div class="sb-filter-label">Disponibilidade</div>
+                <div class="sb-chips">
+                    <button class="sb-chip sb-chip--active" data-disp="todos"   onclick="toggleDisp(this)">Todos</button>
+                    <button class="sb-chip"                 data-disp="livres"  onclick="toggleDisp(this)">🟢 Com vagas</button>
+                    <button class="sb-chip"                 data-disp="ocupado" onclick="toggleDisp(this)">🔴 Ocupados</button>
+                </div>
+            </div>
+
+            <!-- Tipo de conector -->
+            <div class="sb-filter-block">
+                <div class="sb-filter-label">Conector</div>
+                <div class="sb-chips" id="chipsConector">
+                    <button class="sb-chip sb-chip--active" data-tipo="todos"   onclick="toggleChip(this)">Todos</button>
+                    <button class="sb-chip" data-tipo="tipo1"   onclick="toggleChip(this)">Tipo 1</button>
+                    <button class="sb-chip" data-tipo="tipo2"   onclick="toggleChip(this)">Tipo 2</button>
+                    <button class="sb-chip" data-tipo="ccs1"    onclick="toggleChip(this)">CCS 1</button>
+                    <button class="sb-chip" data-tipo="ccs2"    onclick="toggleChip(this)">CCS 2</button>
+                    <button class="sb-chip" data-tipo="chademo" onclick="toggleChip(this)">CHAdeMO</button>
+                    <button class="sb-chip" data-tipo="gbdc"    onclick="toggleChip(this)">GB/T DC</button>
+                    <button class="sb-chip" data-tipo="tesla"   onclick="toggleChip(this)">Tesla</button>
+                    <button class="sb-chip" data-tipo="schuko"  onclick="toggleChip(this)">Schuko</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nav -->
+        <nav class="sb-nav">
+            <a href="{% url 'home' %}" class="sb-nav-link sb-nav-link--active">
+                <span class="sb-nav-icon">🗺️</span>
+                <span>Dashboard</span>
+            </a>
+            <a href="#" class="sb-nav-link">
+                <span class="sb-nav-icon">📊</span>
+                <span>Relatórios</span>
+            </a>
+            <a href="#" class="sb-nav-link">
+                <span class="sb-nav-icon">⚙️</span>
+                <span>Configurações</span>
+            </a>
+        </nav>
+
+        <!-- Perfil + logout -->
+        <div class="sb-footer">
+            <div class="sb-user">
+                <div class="sb-avatar">{{ user.username|slice:":2"|upper }}</div>
+                <div class="sb-user-info">
+                    <div class="sb-user-name">{{ user.username }}</div>
+                    <div class="sb-user-role">{% if user.is_staff %}Administrador{% else %}Usuário{% endif %}</div>
+                </div>
+            </div>
+            <form action="{% url 'logout' %}" method="post" style="margin:0;">
+                {% csrf_token %}
+                <button class="btn-logout" type="submit">Sair</button>
+            </form>
+        </div>
+
+    </aside>
+
+    <!-- Overlay mobile -->
+    <div class="sb-overlay" id="sbOverlay" onclick="toggleSidebar()"></div>
+    {% endif %}
+
+    <!-- MAIN -->
+    <main class="main">
+
+        <!-- TOPBAR -->
+        <header class="topbar">
+            <div class="topbar-left">
+                {% if user.is_authenticated %}
+                <!-- Hamburguer mobile -->
+                <button class="sb-hamburger" onclick="toggleSidebar()" aria-label="Menu">
+                    <span></span><span></span><span></span>
+                </button>
+                {% endif %}
+                <h1>{% block topbar_title %}Olá, {{ user.username }} 👋{% endblock %}</h1>
+            </div>
+
+            <div class="topbar-right">
+                {% block topbar_actions %}{% endblock %}
+            </div>
+        </header>
+
+        <!-- CONTEÚDO DINÂMICO -->
+        <section class="content">
+            {% block content %}{% endblock %}
+        </section>
+
+    </main>
+</div>
+
+<!-- SCRIPTS -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+{% block scripts %}{% endblock %}
+
+<script>
+/* ── SIDEBAR MOBILE TOGGLE ── */
+function toggleSidebar() {
+    const sb  = document.getElementById('sidebar');
+    const ov  = document.getElementById('sbOverlay');
+    if (!sb) return;
+    const open = sb.classList.toggle('sb--open');
+    if (ov) ov.classList.toggle('sb-overlay--show', open);
+    document.body.classList.toggle('sb-no-scroll', open);
+}
+
+/* ── TOAST SYSTEM (global) ── */
+window.showToast = function(msg, type = 'info', duration = 3000) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast--${type}`;
+    toast.textContent = msg;
+    container.appendChild(toast);
+
+    // Anima entrada
+    requestAnimationFrame(() => toast.classList.add('toast--show'));
+
+    setTimeout(() => {
+        toast.classList.remove('toast--show');
+        toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+    }, duration);
+};
+</script>
+
+</body>
+</html>
