@@ -1,3 +1,2 @@
-# Ativa o virtual environment e inicia o servidor Django
-& ./venv/Scripts/Activate.ps1
-python manage.py runserver
+# Usa diretamente o Python do ambiente virtual para evitar problemas de PATH
+& .\venv\Scripts\python.exe manage.py runserver

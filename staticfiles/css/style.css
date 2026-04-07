@@ -820,3 +820,212 @@ body:not(.logged) .main { margin-left: 0; width: 100%; }
 @media (max-width: 480px) {
   .preco-grid { grid-template-columns: 1fr; }
 }
+
+.sb-logo-img {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+    /* Leve brilho verde para integrar ao tema */
+    filter: drop-shadow(0 0 6px rgba(0, 230, 118, 0.5));
+    transition: filter var(--transition);
+}
+ 
+.sb-logo:hover .sb-logo-img {
+    filter: drop-shadow(0 0 10px rgba(0, 230, 118, 0.8));
+}
+ 
+ 
+/* ─────────────────────────────────────────
+   LOGIN — WRAPPER CENTRALIZADO
+   ───────────────────────────────────────── */
+.login-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    position: relative;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 18% 22%, rgba(0, 230, 118, 0.24) 0%, rgba(0, 230, 118, 0.08) 18%, transparent 42%),
+        radial-gradient(circle at 82% 78%, rgba(0, 200, 83, 0.22) 0%, rgba(0, 200, 83, 0.06) 20%, transparent 44%),
+        linear-gradient(145deg, #020507 0%, #07110d 28%, #04110b 46%, #020507 72%, #000000 100%);
+}
+
+.login-wrapper::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(115deg, rgba(255, 255, 255, 0.03) 0%, transparent 32%),
+        linear-gradient(300deg, rgba(0, 230, 118, 0.08) 0%, transparent 30%);
+    pointer-events: none;
+}
+
+.login-wrapper::after {
+    content: "";
+    position: absolute;
+    inset: auto;
+    width: 46vw;
+    height: 46vw;
+    min-width: 280px;
+    min-height: 280px;
+    right: -10vw;
+    bottom: -18vw;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 230, 118, 0.16) 0%, rgba(0, 230, 118, 0.05) 38%, transparent 72%);
+    filter: blur(18px);
+    pointer-events: none;
+}
+ 
+/* Remove o topbar na página de login */
+body:not(.logged) .topbar { display: none; }
+body:not(.logged) .main   { padding: 0; }
+ 
+ 
+/* ─────────────────────────────────────────
+   LOGIN — CARD
+   ───────────────────────────────────────── */
+.login-card {
+    width: 100%;
+    max-width: 400px;
+    background: var(--bg-card);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    padding: 48px 40px 40px;
+    box-shadow: var(--shadow-card),
+                0 0 0 1px rgba(255, 255, 255, 0.02) inset,
+                0 0 80px rgba(0, 230, 118, 0.04);
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+}
+ 
+/* Linha de brilho no topo do card */
+.login-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 15%; right: 15%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.5;
+}
+ 
+ 
+/* ─────────────────────────────────────────
+   LOGIN — LOGO COM DESTAQUE
+   ───────────────────────────────────────── */
+.login-logo-wrap {
+    position: relative;
+    width: 96px;
+    height: 96px;
+    margin: 0 auto 20px;
+}
+ 
+/* Imagem da logo */
+.login-logo-img {
+    width: 96px;
+    height: 96px;
+    border-radius: 22px;
+    object-fit: cover;
+    position: relative;
+    z-index: 1;
+    border: 1px solid rgba(0, 230, 118, 0.2);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+    /* Animação sutil de entrada */
+    animation: logo-drop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+ 
+@keyframes logo-drop {
+    from { opacity: 0; transform: scale(0.7) translateY(-10px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+ 
+/* Glow pulsante atrás da logo */
+.login-logo-glow {
+    position: absolute;
+    inset: -12px;
+    border-radius: 32px;
+    background: radial-gradient(circle, rgba(0, 230, 118, 0.18) 0%, transparent 70%);
+    animation: glow-pulse 3s ease-in-out infinite;
+    z-index: 0;
+}
+ 
+@keyframes glow-pulse {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50%       { opacity: 1;   transform: scale(1.08); }
+}
+ 
+ 
+/* ─────────────────────────────────────────
+   LOGIN — BRAND (nome + subtítulo)
+   ───────────────────────────────────────── */
+.login-brand {
+    text-align: center;
+    margin-bottom: 32px;
+}
+ 
+.login-brand-name {
+    font-family: "Syne", sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin-bottom: 6px;
+}
+ 
+.login-brand-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+}
+ 
+ 
+/* ─────────────────────────────────────────
+   LOGIN — FORM
+   ───────────────────────────────────────── */
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+ 
+.login-btn {
+    margin-top: 8px;
+}
+ 
+.login-footer-link {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+ 
+.login-footer-link a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    transition: opacity var(--transition);
+}
+ 
+.login-footer-link a:hover { opacity: 0.8; }
+ 
+ 
+/* ─────────────────────────────────────────
+   RESPONSIVE LOGIN
+   ───────────────────────────────────────── */
+@media (max-width: 480px) {
+    .login-card {
+        padding: 36px 24px 32px;
+        border-radius: var(--radius-lg);
+    }
+ 
+    .login-logo-img  { width: 80px; height: 80px; border-radius: 18px; }
+    .login-logo-wrap { width: 80px; height: 80px; }
+    .login-brand-name { font-size: 24px; }
+}

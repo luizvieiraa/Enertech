@@ -1,37 +1,57 @@
 {% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Entrar — Enertech{% endblock %}
 
 {% block content %}
 
-<div class="card">
+<div class="login-wrapper">
+    <div class="login-card">
 
-    <h2 class="title">Entrar ⚡</h2>
+        <div class="login-logo-wrap">
+            <img src="{% static 'img/logo.jpeg' %}"
+                 alt="Enertech Logo"
+                 class="login-logo-img">
+            <div class="login-logo-glow"></div>
+        </div>
 
-    <!-- MENSAGENS -->
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert {{ message.tags }}">
-                {{ message }}
+        <div class="login-brand">
+            <h1 class="login-brand-name">Enertech</h1>
+            <p class="login-brand-sub">Plataforma de eletropostos</p>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if 'success' in message.tags %}alert-success{% else %}alert-error{% endif %}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post" class="login-form">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label class="form-label">Usuário</label>
+                <input type="text" name="username" class="form-control"
+                       placeholder="seu.usuario" required autofocus>
             </div>
-        {% endfor %}
-    {% endif %}
 
-    <form method="post">
-        {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">Senha</label>
+                <input type="password" name="password" class="form-control"
+                       placeholder="••••••••" required>
+            </div>
 
-        <input type="text" name="username" class="form-control" placeholder="Usuário" required>
+            <button type="submit" class="btn login-btn">Entrar</button>
+        </form>
 
-        <input type="password" name="password" class="form-control" placeholder="Senha" required>
+        <div class="login-footer-link">
+            <small>
+                Não tem conta?
+                <a href="{% url 'register' %}">Criar conta</a>
+            </small>
+        </div>
 
-        <button type="submit" class="btn">Entrar</button>
-    </form>
-
-    <div class="link">
-        <small>
-            Não tem conta?
-            <a href="{% url 'register' %}">Criar conta</a>
-        </small>
     </div>
-
 </div>
 
 {% endblock %}

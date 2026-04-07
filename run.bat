@@ -1,3 +1,2 @@
 @echo off
-call venv\Scripts\activate.bat
-python manage.py runserver
+venv\Scripts\python.exe manage.py runserver
