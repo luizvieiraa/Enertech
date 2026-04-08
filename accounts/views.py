@@ -13,8 +13,6 @@ import requests
 
 from .models import Avaliacao, Conector, Ponto
 
-from .models import Avaliacao, Conector, Ponto
-
 
 class CustomLoginView(LoginView):
     template_name = 'accounts/login.html'
@@ -100,8 +98,6 @@ def salvar_ponto(request):
     return JsonResponse({'error': 'Método não permitido'}, status=405)
 
 
-<<<<<<< HEAD
-=======
 @login_required
 def geocodificar_endereco(request):
     """Converte endereço em coordenadas usando Nominatim (OpenStreetMap)"""
@@ -154,7 +150,6 @@ def geocodificar_endereco(request):
     return JsonResponse({'error': 'Método não permitido'}, status=405)
 
 
->>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
 @staff_member_required
 def remover_ponto(request, id):
     if request.method == 'POST':

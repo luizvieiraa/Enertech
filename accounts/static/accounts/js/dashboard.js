@@ -4,11 +4,8 @@ let dadosPontos = [];
 let usuarioLogadoEhAdmin = false;
 let tiposFiltroAtivos = ['todos'];
 let dispFiltroAtivo = 'todos';
-<<<<<<< HEAD
-=======
 let pontosAbertosDetalhes = null;
 let localizacaoUsuario = null;
->>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
 
 let pontoEditandoDisp = null;
 let pontoAvaliacaoAtual = null;
@@ -29,27 +26,6 @@ const TIPOS_LABEL = {
 function initDashboard(pontosIniciais, ehAdmin) {
     usuarioLogadoEhAdmin = ehAdmin;
 
-<<<<<<< HEAD
-    map = L.map('map').setView([-8.0476, -34.8770], 15);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        attribution: '© OpenStreetMap contributors © CARTO',
-        subdomains: 'abcd',
-        maxZoom: 20,
-    }).addTo(map);
-
-    pontosIniciais.forEach((p) => {
-        const tipos = p.tipos_carregador
-            ? p.tipos_carregador.split(',').map((t) => t.trim()).filter(Boolean)
-            : [];
-        p.vagas_livres = p.vagas_livres ?? ((p.conectores || []).filter((c) => c.status === 'livre').length || 0);
-        p.total_vagas = p.total_vagas ?? ((p.conectores || []).length || 0);
-        processarNovoPonto({ ...p, tipos });
-    });
-
-    atualizarStatsSidebar();
-    iniciarStarPicker();
-    iniciarPolling();
-=======
     // Inicializar Maplibre GL JS
     map = new maplibregl.Map({
         container: 'map',
@@ -77,7 +53,6 @@ function initDashboard(pontosIniciais, ehAdmin) {
         // Obter localização do usuário
         obterLocalizacaoUsuario();
     });
->>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
 }
 
 function atualizarStatsSidebar() {
@@ -111,25 +86,6 @@ function processarNovoPonto(p) {
     }
 
     if (markers[p.id]) {
-<<<<<<< HEAD
-        map.removeLayer(markers[p.id]);
-        delete markers[p.id];
-    }
-
-    const marker = L.marker([p.lat, p.lng], {
-        icon: L.divIcon({
-            html: buildIconHtml(p),
-            className: 'custom-div-icon',
-            iconSize: [36, 50],
-            iconAnchor: [18, 50],
-        }),
-    }).addTo(map);
-
-    marker.bindPopup(buildPopupHtml(p), { maxWidth: 240 });
-    markers[p.id] = marker;
-
-    atualizarListaLateral();
-=======
         markers[p.id].remove();
         delete markers[p.id];
     }
@@ -154,7 +110,6 @@ function processarNovoPonto(p) {
     markers[p.id] = marker;
 
     atualizarProximos();
->>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
     atualizarStatsSidebar();
 }
 
@@ -227,73 +182,6 @@ function buildPopupHtml(p) {
         </div>`;
 }
 
-<<<<<<< HEAD
-function atualizarListaLateral() {
-    const container = document.getElementById('itens-lista');
-    if (!container) return;
-    container.innerHTML = '';
-
-    const filtrados = getPontosFiltrados();
-    const countEl = document.getElementById('listCount');
-    if (countEl) countEl.textContent = filtrados.length;
-
-    if (filtrados.length === 0) {
-        container.innerHTML = `
-            <div style="text-align:center;padding:32px 16px;color:var(--text-muted);">
-                <div style="font-size:28px;margin-bottom:8px;">🔌</div>
-                Nenhum posto encontrado.
-            </div>`;
-        return;
-    }
-
-    filtrados.forEach((p) => {
-        const livres = p.vagas_livres ?? 0;
-        const total = p.total_vagas ?? 0;
-        const corStatus = livres > 0 ? 'var(--accent)' : 'var(--danger)';
-        const txtStatus = livres > 0
-            ? `🟢 ${livres} de ${total} vaga${total !== 1 ? 's' : ''} livre${livres !== 1 ? 's' : ''}`
-            : `🔴 Todas ocupadas (${total} vaga${total !== 1 ? 's' : ''})`;
-
-        const mediaHtml = p.media
-            ? `${'★'.repeat(Math.round(p.media))}${'☆'.repeat(5 - Math.round(p.media))}
-               <span style="color:var(--text-muted);font-size:11px;margin-left:4px;">(${p.total_aval})</span>`
-            : `<span style="color:var(--text-muted);font-size:11px;">Sem avaliações</span>`;
-
-        const gmUrl = `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=driving`;
-
-        const div = document.createElement('div');
-        div.className = 'item-ponto';
-        div.dataset.id = p.id;
-        div.innerHTML = `
-            <div class="ponto-info">
-                <span class="ponto-id">${p.nome}</span>
-                <div class="status-badge" style="color:${corStatus};font-size:12px;font-weight:600;margin:4px 0;">
-                    ${txtStatus}
-                </div>
-                <div style="font-size:13px;color:#f59e0b;margin:3px 0;">${mediaHtml}</div>
-                <div class="preco-tags">
-                    <span class="preco-tag">🟢 R$ ${p.preco_start.toFixed(2)} início</span>
-                    <span class="preco-tag">⚡ R$ ${p.preco_kwh.toFixed(2)}/kWh</span>
-                    <span class="preco-tag">⏱ R$ ${p.preco_ociosidade.toFixed(2)}/min</span>
-                </div>
-                <div class="conectores-lista" id="conectores-${p.id}">
-                    ${buildConectoresListHtml(p.conectores || [])}
-                </div>
-            </div>
-            <div class="ponto-actions">
-                <button class="btn btn-small" onclick="focarPonto(${p.lat},${p.lng},${p.id})">Ver</button>
-                <button class="btn btn-small btn-ghost" onclick="abrirAvaliacao(${p.id})" style="width:auto;">★ Avaliar</button>
-                <a href="${gmUrl}" target="_blank" rel="noopener" class="btn btn-small btn-maps">🗺️ Rota</a>
-                ${usuarioLogadoEhAdmin ? `
-                    <button class="btn btn-small" onclick="abrirEditarDisp(${p.id})" style="width:auto;">⚙️ Vagas</button>
-                    <button class="btn btn-small btn-danger" onclick="removerPonto(${p.id})">Deletar</button>
-                ` : ''}
-            </div>`;
-        container.appendChild(div);
-    });
-}
-
-=======
 
 /* ╔═════════════════════════════════════════╗ */
 /* ║ NOVAS FUNÇÕES - GEOLOCALIZAÇÃO E PRÓXIMOS ║ */
@@ -393,7 +281,6 @@ function fecharProximos() {
     if (box) box.style.display = 'none';
 }
 
->>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
 function buildConectoresListHtml(conectores) {
     if (!conectores.length) return '';
     return `<div class="conectores-grid">
@@ -428,19 +315,7 @@ function atualizarStatus() {
                 ponto.conectores = s.conectores;
 
                 if (markers[ponto.id]) {
-<<<<<<< HEAD
-                    markers[ponto.id].setIcon(L.divIcon({
-                        html: buildIconHtml(ponto),
-                        className: 'custom-div-icon',
-                        iconSize: [36, 50],
-                        iconAnchor: [18, 50],
-                    }));
-                    if (markers[ponto.id].isPopupOpen()) {
-                        markers[ponto.id].setPopupContent(buildPopupHtml(ponto));
-                    }
-=======
                     markers[ponto.id].getElement().innerHTML = buildIconHtml(ponto);
->>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
                 }
 
                 const conEl = document.getElementById(`conectores-${ponto.id}`);
@@ -520,19 +395,12 @@ function aplicarFiltros() {
 
     const filtradosIds = new Set(getPontosFiltrados().map((p) => p.id));
     dadosPontos.forEach((p) => {
-<<<<<<< HEAD
-        if (filtradosIds.has(p.id)) {
-            if (!map.hasLayer(markers[p.id])) markers[p.id]?.addTo(map);
-        } else if (map.hasLayer(markers[p.id])) {
-            map.removeLayer(markers[p.id]);
-=======
         if (markers[p.id]) {
             if (filtradosIds.has(p.id)) {
                 markers[p.id].getElement().style.display = 'block';
             } else {
                 markers[p.id].getElement().style.display = 'none';
             }
->>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
         }
     });
     atualizarProximos();
@@ -611,8 +479,6 @@ function focarPonto(lat, lng, id) {
     });
 }
 
-<<<<<<< HEAD
-=======
 window.buscarEndereco = async function() {
     const endereco = document.getElementById('endereco_campo').value.trim();
     const resultadoEl = document.getElementById('endereco_resultado');
@@ -666,7 +532,6 @@ window.buscarEndereco = async function() {
     }
 }
 
->>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
 window.salvarPonto = function () {
     const nome = document.getElementById('nome_posto').value.trim();
     const lat = document.getElementById('lat').value;
@@ -728,17 +593,10 @@ window.removerPonto = function (id) {
     })
         .then((r) => {
             if (r.ok) {
-<<<<<<< HEAD
-                map.removeLayer(markers[id]);
-                delete markers[id];
-                dadosPontos = dadosPontos.filter((p) => p.id !== id);
-                atualizarListaLateral();
-=======
                 markers[id]?.remove();
                 delete markers[id];
                 dadosPontos = dadosPontos.filter((p) => p.id !== id);
                 atualizarProximos();
->>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
                 atualizarStatsSidebar();
                 showToast('Posto removido.', 'success');
             } else {
@@ -759,10 +617,6 @@ window.abrirAvaliacao = function (id) {
     document.getElementById('avalLista').innerHTML = '<div class="aval-empty">Carregando...</div>';
     atualizarMediaHeader(ponto?.media, ponto?.total_aval);
 
-<<<<<<< HEAD
-    map.closePopup();
-=======
->>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
     document.getElementById('modalAvaliacao').style.display = 'flex';
 
     fetch(`/avaliacoes/${id}/`)
@@ -815,20 +669,9 @@ window.enviarAvaliacao = function () {
                 .then((r) => r.json())
                 .then((d) => renderListaAvaliacoes(d.avaliacoes));
             if (markers[pontoAvaliacaoAtual]) {
-<<<<<<< HEAD
-                markers[pontoAvaliacaoAtual].setIcon(L.divIcon({
-                    html: buildIconHtml(ponto),
-                    className: 'custom-div-icon',
-                    iconSize: [36, 50],
-                    iconAnchor: [18, 50],
-                }));
-            }
-            atualizarListaLateral();
-=======
                 markers[pontoAvaliacaoAtual].getElement().innerHTML = buildIconHtml(ponto);
             }
             atualizarProximos();
->>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
             showToast('Avaliação enviada!', 'success');
         })
         .catch(() => showToast('Erro ao enviar avaliação.', 'danger'));
@@ -943,25 +786,10 @@ window.salvarDisponibilidade = function () {
                 ponto.total_vagas = novasConectores.length;
 
                 if (markers[pontoEditandoDisp]) {
-<<<<<<< HEAD
-                    markers[pontoEditandoDisp].setIcon(L.divIcon({
-                        html: buildIconHtml(ponto),
-                        className: 'custom-div-icon',
-                        iconSize: [36, 50],
-                        iconAnchor: [18, 50],
-                    }));
-                    if (markers[pontoEditandoDisp].isPopupOpen()) {
-                        markers[pontoEditandoDisp].setPopupContent(buildPopupHtml(ponto));
-                    }
-                }
-
-                atualizarListaLateral();
-=======
                     markers[pontoEditandoDisp].getElement().innerHTML = buildIconHtml(ponto);
                 }
 
                 atualizarProximos();
->>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
                 atualizarStatsSidebar();
                 fecharEditarDisp();
                 showToast('Disponibilidade atualizada!', 'success');
@@ -978,8 +806,6 @@ function getCSRFToken() {
     if (p.length === 2) return p.pop().split(';').shift();
     return '';
 }
-<<<<<<< HEAD
-=======
 
 
 /* ========================================= */
@@ -1139,4 +965,3 @@ function toggleFilterPanel() {
         btnText.textContent = 'Fechar Filtros';
     }
 }
->>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
