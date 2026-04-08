@@ -4,6 +4,11 @@ let dadosPontos = [];
 let usuarioLogadoEhAdmin = false;
 let tiposFiltroAtivos = ['todos'];
 let dispFiltroAtivo = 'todos';
+<<<<<<< HEAD
+=======
+let pontosAbertosDetalhes = null;
+let localizacaoUsuario = null;
+>>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
 
 let pontoEditandoDisp = null;
 let pontoAvaliacaoAtual = null;
@@ -24,6 +29,7 @@ const TIPOS_LABEL = {
 function initDashboard(pontosIniciais, ehAdmin) {
     usuarioLogadoEhAdmin = ehAdmin;
 
+<<<<<<< HEAD
     map = L.map('map').setView([-8.0476, -34.8770], 15);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         attribution: '© OpenStreetMap contributors © CARTO',
@@ -43,6 +49,35 @@ function initDashboard(pontosIniciais, ehAdmin) {
     atualizarStatsSidebar();
     iniciarStarPicker();
     iniciarPolling();
+=======
+    // Inicializar Maplibre GL JS
+    map = new maplibregl.Map({
+        container: 'map',
+        style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+        center: [-34.8770, -8.0476],
+        zoom: 15,
+        pitch: 0,
+        bearing: 0
+    });
+
+    map.on('load', function() {
+        pontosIniciais.forEach((p) => {
+            const tipos = p.tipos_carregador
+                ? p.tipos_carregador.split(',').map((t) => t.trim()).filter(Boolean)
+                : [];
+            p.vagas_livres = p.vagas_livres ?? ((p.conectores || []).filter((c) => c.status === 'livre').length || 0);
+            p.total_vagas = p.total_vagas ?? ((p.conectores || []).length || 0);
+            processarNovoPonto({ ...p, tipos });
+        });
+
+        atualizarStatsSidebar();
+        iniciarStarPicker();
+        iniciarPolling();
+        
+        // Obter localização do usuário
+        obterLocalizacaoUsuario();
+    });
+>>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
 }
 
 function atualizarStatsSidebar() {
@@ -76,6 +111,7 @@ function processarNovoPonto(p) {
     }
 
     if (markers[p.id]) {
+<<<<<<< HEAD
         map.removeLayer(markers[p.id]);
         delete markers[p.id];
     }
@@ -93,6 +129,32 @@ function processarNovoPonto(p) {
     markers[p.id] = marker;
 
     atualizarListaLateral();
+=======
+        markers[p.id].remove();
+        delete markers[p.id];
+    }
+
+    // Criar marcador com Maplibre GL (método nativo)
+    const markerEl = document.createElement('div');
+    markerEl.innerHTML = buildIconHtml(p);
+    markerEl.style.cursor = 'pointer';
+    markerEl.onclick = function(e) {
+        e.stopPropagation();
+        abrirSidebarDetalhes(p.id);
+    };
+
+    const marker = new maplibregl.Marker({ element: markerEl })
+        .setLngLat([p.lng, p.lat])
+        .addTo(map);
+
+    // Armazenar com referência para o elemento (para atualizar depois)
+    marker.__element = markerEl;
+    marker.__pontoId = p.id;
+
+    markers[p.id] = marker;
+
+    atualizarProximos();
+>>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
     atualizarStatsSidebar();
 }
 
@@ -165,6 +227,7 @@ function buildPopupHtml(p) {
         </div>`;
 }
 
+<<<<<<< HEAD
 function atualizarListaLateral() {
     const container = document.getElementById('itens-lista');
     if (!container) return;
@@ -230,6 +293,107 @@ function atualizarListaLateral() {
     });
 }
 
+=======
+
+/* ╔═════════════════════════════════════════╗ */
+/* ║ NOVAS FUNÇÕES - GEOLOCALIZAÇÃO E PRÓXIMOS ║ */
+/* ╚═════════════════════════════════════════╝ */
+
+function obterLocalizacaoUsuario() {
+    if (!navigator.geolocation) {
+        console.warn('Geolocalização não suportada neste navegador');
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            localizacaoUsuario = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+            };
+            console.log('📍 Localização obtida:', localizacaoUsuario);
+            atualizarProximos();
+        },
+        (error) => {
+            console.warn('Erro ao obter localização:', error.message);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+}
+
+function calcularDistancia(lat1, lng1, lat2, lng2) {
+    // Fórmula de Haversine para calcular distância entre dois pontos
+    const R = 6371; // Raio da Terra em km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = 
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+function atualizarProximos() {
+    const box = document.getElementById('proximosBox');
+    const lista = document.getElementById('proximosLista');
+    
+    if (!box || !lista) return;
+    
+    if (!localizacaoUsuario) {
+        box.style.display = 'none';
+        return;
+    }
+
+    // Filtrar eletropostos dentro de 10km APLICANDO OS FILTROS DA SIDEBAR
+    const filtrados = getPontosFiltrados();
+    const proximos = filtrados
+        .map((p) => ({
+            ...p,
+            distancia: calcularDistancia(
+                localizacaoUsuario.lat, 
+                localizacaoUsuario.lng, 
+                p.lat, 
+                p.lng
+            )
+        }))
+        .filter((p) => p.distancia <= 10)
+        .sort((a, b) => a.distancia - b.distancia);
+
+    if (proximos.length === 0) {
+        lista.innerHTML = '<div class="proximos-empty">Nenhum eletroposto a 10km de você</div>';
+        box.style.display = 'flex';
+        return;
+    }
+
+    lista.innerHTML = proximos
+        .map((p) => {
+            const livres = p.vagas_livres ?? 0;
+            const status = livres > 0 ? '🟢' : '🔴';
+            const distanceStr = p.distancia >= 1 
+                ? `${p.distancia.toFixed(1)}km` 
+                : `${Math.round(p.distancia * 1000)}m`;
+            
+            return `
+                <div class="proximos-item" onclick="focarPonto(${p.lat}, ${p.lng}, ${p.id}); abrirSidebarDetalhes(${p.id});">
+                    <div class="proximos-item-name">${p.nome}</div>
+                    <div class="proximos-item-info">
+                        <span>${status} ${livres} vaga${livres !== 1 ? 's' : ''}</span>
+                        <span>📍 ${distanceStr}</span>
+                    </div>
+                </div>`;
+        })
+        .join('');
+
+    box.style.display = 'flex';
+}
+
+function fecharProximos() {
+    const box = document.getElementById('proximosBox');
+    if (box) box.style.display = 'none';
+}
+
+>>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
 function buildConectoresListHtml(conectores) {
     if (!conectores.length) return '';
     return `<div class="conectores-grid">
@@ -264,6 +428,7 @@ function atualizarStatus() {
                 ponto.conectores = s.conectores;
 
                 if (markers[ponto.id]) {
+<<<<<<< HEAD
                     markers[ponto.id].setIcon(L.divIcon({
                         html: buildIconHtml(ponto),
                         className: 'custom-div-icon',
@@ -273,6 +438,9 @@ function atualizarStatus() {
                     if (markers[ponto.id].isPopupOpen()) {
                         markers[ponto.id].setPopupContent(buildPopupHtml(ponto));
                     }
+=======
+                    markers[ponto.id].getElement().innerHTML = buildIconHtml(ponto);
+>>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
                 }
 
                 const conEl = document.getElementById(`conectores-${ponto.id}`);
@@ -352,13 +520,22 @@ function aplicarFiltros() {
 
     const filtradosIds = new Set(getPontosFiltrados().map((p) => p.id));
     dadosPontos.forEach((p) => {
+<<<<<<< HEAD
         if (filtradosIds.has(p.id)) {
             if (!map.hasLayer(markers[p.id])) markers[p.id]?.addTo(map);
         } else if (map.hasLayer(markers[p.id])) {
             map.removeLayer(markers[p.id]);
+=======
+        if (markers[p.id]) {
+            if (filtradosIds.has(p.id)) {
+                markers[p.id].getElement().style.display = 'block';
+            } else {
+                markers[p.id].getElement().style.display = 'none';
+            }
+>>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
         }
     });
-    atualizarListaLateral();
+    atualizarProximos();
 }
 
 function resetarFiltros() {
@@ -427,10 +604,69 @@ window.fecharFormulario = function () {
 };
 
 function focarPonto(lat, lng, id) {
-    map.setView([lat, lng], 16);
-    markers[id].openPopup();
+    map.flyTo({
+        center: [lng, lat],
+        zoom: 16,
+        duration: 1000
+    });
 }
 
+<<<<<<< HEAD
+=======
+window.buscarEndereco = async function() {
+    const endereco = document.getElementById('endereco_campo').value.trim();
+    const resultadoEl = document.getElementById('endereco_resultado');
+    
+    if (!endereco) {
+        resultadoEl.textContent = '⚠️ Digite um endereço';
+        resultadoEl.style.color = '#f59e0b';
+        return;
+    }
+    
+    resultadoEl.textContent = '🔄 Buscando...';
+    resultadoEl.style.color = '#94a3b8';
+    
+    try {
+        const response = await fetch('/geocodificar-endereco/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify({ endereco })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            resultadoEl.textContent = `❌ ${data.error || 'Erro ao buscar endereço'}`;
+            resultadoEl.style.color = '#ff3d5a';
+            return;
+        }
+        
+        // Atualizar os campos lat/lng
+        document.getElementById('lat').value = data.lat.toFixed(6);
+        document.getElementById('lng').value = data.lng.toFixed(6);
+        
+        resultadoEl.textContent = `✅ ${data.endereco_completo}`;
+        resultadoEl.style.color = '#00e676';
+        
+        // Focar no mapa no endereço encontrado
+        if (map) {
+            map.flyTo({
+                center: [data.lng, data.lat],
+                zoom: 17,
+                duration: 1000
+            });
+        }
+        
+    } catch (error) {
+        resultadoEl.textContent = `❌ Erro: ${error.message}`;
+        resultadoEl.style.color = '#ff3d5a';
+    }
+}
+
+>>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
 window.salvarPonto = function () {
     const nome = document.getElementById('nome_posto').value.trim();
     const lat = document.getElementById('lat').value;
@@ -492,10 +728,17 @@ window.removerPonto = function (id) {
     })
         .then((r) => {
             if (r.ok) {
+<<<<<<< HEAD
                 map.removeLayer(markers[id]);
                 delete markers[id];
                 dadosPontos = dadosPontos.filter((p) => p.id !== id);
                 atualizarListaLateral();
+=======
+                markers[id]?.remove();
+                delete markers[id];
+                dadosPontos = dadosPontos.filter((p) => p.id !== id);
+                atualizarProximos();
+>>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
                 atualizarStatsSidebar();
                 showToast('Posto removido.', 'success');
             } else {
@@ -516,7 +759,10 @@ window.abrirAvaliacao = function (id) {
     document.getElementById('avalLista').innerHTML = '<div class="aval-empty">Carregando...</div>';
     atualizarMediaHeader(ponto?.media, ponto?.total_aval);
 
+<<<<<<< HEAD
     map.closePopup();
+=======
+>>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
     document.getElementById('modalAvaliacao').style.display = 'flex';
 
     fetch(`/avaliacoes/${id}/`)
@@ -569,6 +815,7 @@ window.enviarAvaliacao = function () {
                 .then((r) => r.json())
                 .then((d) => renderListaAvaliacoes(d.avaliacoes));
             if (markers[pontoAvaliacaoAtual]) {
+<<<<<<< HEAD
                 markers[pontoAvaliacaoAtual].setIcon(L.divIcon({
                     html: buildIconHtml(ponto),
                     className: 'custom-div-icon',
@@ -577,6 +824,11 @@ window.enviarAvaliacao = function () {
                 }));
             }
             atualizarListaLateral();
+=======
+                markers[pontoAvaliacaoAtual].getElement().innerHTML = buildIconHtml(ponto);
+            }
+            atualizarProximos();
+>>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
             showToast('Avaliação enviada!', 'success');
         })
         .catch(() => showToast('Erro ao enviar avaliação.', 'danger'));
@@ -691,6 +943,7 @@ window.salvarDisponibilidade = function () {
                 ponto.total_vagas = novasConectores.length;
 
                 if (markers[pontoEditandoDisp]) {
+<<<<<<< HEAD
                     markers[pontoEditandoDisp].setIcon(L.divIcon({
                         html: buildIconHtml(ponto),
                         className: 'custom-div-icon',
@@ -703,6 +956,12 @@ window.salvarDisponibilidade = function () {
                 }
 
                 atualizarListaLateral();
+=======
+                    markers[pontoEditandoDisp].getElement().innerHTML = buildIconHtml(ponto);
+                }
+
+                atualizarProximos();
+>>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
                 atualizarStatsSidebar();
                 fecharEditarDisp();
                 showToast('Disponibilidade atualizada!', 'success');
@@ -719,3 +978,165 @@ function getCSRFToken() {
     if (p.length === 2) return p.pop().split(';').shift();
     return '';
 }
+<<<<<<< HEAD
+=======
+
+
+/* ========================================= */
+/* SIDEBAR DETALHES (NOVA SIDEBAR DIREITA)   */
+/* ========================================= */
+
+function abrirSidebarDetalhes(pontoId) {
+    pontosAbertosDetalhes = pontoId;
+    const ponto = dadosPontos.find((p) => p.id === pontoId);
+    if (!ponto) return;
+
+    const sb = document.getElementById('sidebarDetalhes');
+    const overlay = document.getElementById('sbOverlayDetalhes');
+    if (!sb || !overlay) return;
+
+    document.getElementById('detalhesNome').textContent = ponto.nome;
+    
+    let conteudo = `
+        <div class="detalhe-section">
+            <div class="detalhe-label">Status de Disponibilidade</div>
+            <div class="detalhe-status ${ponto.vagas_livres > 0 ? 'livre' : 'ocupado'}">
+                ${ponto.vagas_livres > 0 ? '🟢' : '🔴'}
+                ${ponto.vagas_livres > 0 
+                    ? `${ponto.vagas_livres} de ${ponto.total_vagas} vaga${ponto.total_vagas !== 1 ? 's' : ''} livre${ponto.vagas_livres !== 1 ? 's' : ''}` 
+                    : `Todas as ${ponto.total_vagas} vaga${ponto.total_vagas !== 1 ? 's' : ''} ocupadas`}
+            </div>
+        </div>
+
+        <div class="detalhe-section">
+            <div class="detalhe-label">Avaliação</div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                ${ponto.media 
+                    ? `<span style="font-size: 18px; color: var(--warning);">${'★'.repeat(Math.round(ponto.media))}${'☆'.repeat(5 - Math.round(ponto.media))}</span>
+                       <span style="color: var(--text-secondary); font-size: 13px;">${ponto.media} de 5 · ${ponto.total_aval} avaliação${ponto.total_aval !== 1 ? 'ões' : ''}</span>`
+                    : `<span style="color: var(--text-muted); font-size: 13px;">Sem avaliações ainda</span>`}
+            </div>
+        </div>
+
+        <div class="detalhe-section">
+            <div class="detalhe-label">Localização</div>
+            <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+                <div><strong>Latitude:</strong> ${ponto.lat.toFixed(6)}</div>
+                <div><strong>Longitude:</strong> ${ponto.lng.toFixed(6)}</div>
+            </div>
+        </div>
+
+        <div class="detalhe-section">
+            <div class="detalhe-label">Potência</div>
+            <div class="detalhe-value">${ponto.consumo} kW</div>
+        </div>
+
+        <div class="detalhe-section">
+            <div class="detalhe-label">Preços</div>
+            <div class="detalhe-preco">
+                <div class="detalhe-preco-item">
+                    <span class="detalhe-preco-label">Taxa de Início</span>
+                    <span class="detalhe-preco-valor">R$ ${ponto.preco_start.toFixed(2)}</span>
+                </div>
+                <div class="detalhe-preco-item">
+                    <span class="detalhe-preco-label">Por kWh</span>
+                    <span class="detalhe-preco-valor">R$ ${ponto.preco_kwh.toFixed(2)}</span>
+                </div>
+                <div class="detalhe-preco-item">
+                    <span class="detalhe-preco-label">Ociosidade /min</span>
+                    <span class="detalhe-preco-valor">R$ ${ponto.preco_ociosidade.toFixed(2)}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="detalhe-section">
+            <div class="detalhe-label">Conectores</div>
+            <div class="detalhe-conectores">
+                ${ponto.conectores && ponto.conectores.length > 0
+                    ? ponto.conectores.map((c) => {
+                        const cor = c.status === 'livre' ? '#00e676' : c.status === 'ocupado' ? '#ff3d5a' : '#94a3b8';
+                        const statusLabel = c.status === 'livre' ? 'Livre' : c.status === 'ocupado' ? 'Ocupado' : 'Inativo';
+                        const statusCor = c.status === 'livre' ? 'var(--accent)' : 'var(--danger)';
+                        return `
+                            <div class="detalhe-conector-item">
+                                <div class="detalhe-conector-dot" style="background: ${cor}; box-shadow: 0 0 6px ${cor};"></div>
+                                <div class="detalhe-conector-info">
+                                    <div class="detalhe-conector-tipo">${TIPOS_LABEL[c.tipo] || c.tipo}</div>
+                                    <div class="detalhe-conector-kw">${c.potencia} kW</div>
+                                </div>
+                                <div class="detalhe-conector-status" style="color: ${statusCor};">${statusLabel}</div>
+                            </div>`;
+                    }).join('')
+                    : '<div style="color: var(--text-muted); font-size: 13px;">Nenhum conector registrado</div>'}
+            </div>
+        </div>
+
+        <div class="detalhe-btn-group">
+            <button class="detalhe-btn" onclick="focarPonto(${ponto.lat}, ${ponto.lng}, ${ponto.id})">
+                📍 Focar no Mapa
+            </button>
+            <button class="detalhe-btn" onclick="abrirAvaliacao(${ponto.id})">
+                ⭐ Avaliar
+            </button>
+        </div>
+
+        <div style="margin-top: 12px;">
+            <a href="https://www.google.com/maps/dir/?api=1&destination=${ponto.lat},${ponto.lng}&travelmode=driving" target="_blank" rel="noopener" class="detalhe-btn" style="display: block; text-align: center; text-decoration: none;">
+                🗺️ Abrir no Google Maps
+            </a>
+        </div>
+    `;
+
+    if (usuarioLogadoEhAdmin) {
+        conteudo += `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px;">
+            <button class="detalhe-btn" onclick="abrirEditarDisp(${ponto.id})">
+                ⚙️ Editar Vagas
+            </button>
+            <button class="detalhe-btn danger" onclick="removerPonto(${ponto.id})">
+                🗑️ Deletar
+            </button>
+        </div>`;
+    }
+
+    document.getElementById('detalhesConteudo').innerHTML = conteudo;
+    
+    sb.classList.add('open');
+    overlay.classList.add('open');
+}
+
+function fecharSidebarDetalhes() {
+    const sb = document.getElementById('sidebarDetalhes');
+    const overlay = document.getElementById('sbOverlayDetalhes');
+    if (sb) sb.classList.remove('open');
+    if (overlay) overlay.classList.remove('open');
+    pontosAbertosDetalhes = null;
+}
+
+
+/* ========================================= */
+/* TOGGLE FILTROS                            */
+/* ========================================= */
+
+function toggleFilterPanel() {
+    const content = document.getElementById('sbFiltersContent');
+    const btn = document.querySelector('.sb-filter-toggle-btn');
+    const btnText = document.getElementById('filterBtnText');
+    
+    if (!content || !btn) return;
+    
+    const isOpen = content.classList.contains('filters-open');
+    
+    if (isOpen) {
+        content.classList.remove('filters-open');
+        content.classList.add('filters-collapsed');
+        btn.classList.remove('active');
+        btnText.textContent = 'Abrir Filtros';
+    } else {
+        content.classList.add('filters-open');
+        content.classList.remove('filters-collapsed');
+        btn.classList.add('active');
+        btnText.textContent = 'Fechar Filtros';
+    }
+}
+>>>>>>> 2c0784e (alteração na localização e sidebars alteradas)

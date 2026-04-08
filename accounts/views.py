@@ -9,6 +9,9 @@ from django.urls import reverse_lazy
 from django.views import View
 
 import json
+import requests
+
+from .models import Avaliacao, Conector, Ponto
 
 from .models import Avaliacao, Conector, Ponto
 
@@ -97,11 +100,67 @@ def salvar_ponto(request):
     return JsonResponse({'error': 'Método não permitido'}, status=405)
 
 
+<<<<<<< HEAD
+=======
+@login_required
+def geocodificar_endereco(request):
+    """Converte endereço em coordenadas usando Nominatim (OpenStreetMap)"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            endereco = data.get('endereco', '').strip()
+            
+            if not endereco:
+                return JsonResponse({'error': 'Endereço não fornecido'}, status=400)
+            
+            # Usar Nominatim (OpenStreetMap) para geocodificação
+            url = 'https://nominatim.openstreetmap.org/search'
+            params = {
+                'q': endereco,
+                'format': 'json',
+                'limit': 1
+            }
+            headers = {
+                'User-Agent': 'Enertech/1.0'
+            }
+            
+            response = requests.get(url, params=params, headers=headers, timeout=5)
+            response.raise_for_status()
+            
+            results = response.json()
+            
+            if not results:
+                return JsonResponse({'error': 'Endereço não encontrado'}, status=404)
+            
+            first_result = results[0]
+            lat = float(first_result.get('lat'))
+            lng = float(first_result.get('lon'))
+            display_name = first_result.get('display_name', endereco)
+            
+            return JsonResponse({
+                'lat': lat,
+                'lng': lng,
+                'endereco_completo': display_name,
+                'status': 'sucesso'
+            })
+            
+        except requests.exceptions.RequestException as e:
+            return JsonResponse({'error': f'Erro ao conectar com serviço de mapas: {str(e)}'}, status=500)
+        except (ValueError, KeyError) as e:
+            return JsonResponse({'error': f'Erro ao processar resposta: {str(e)}'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    
+    return JsonResponse({'error': 'Método não permitido'}, status=405)
+
+
+>>>>>>> 2c0784e (alteração na localização e sidebars alteradas)
 @staff_member_required
 def remover_ponto(request, id):
     if request.method == 'POST':
         try:
             ponto = get_object_or_404(Ponto, id=id)
+
             ponto.delete()
             return JsonResponse({'status': 'removido'})
         except Exception as e:

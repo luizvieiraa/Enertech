@@ -1,6 +1,6 @@
 from django.urls import path
 from accounts import views
-from .views import CustomLoginView, RegisterView, home, salvar_ponto, remover_ponto, atualizar_disponibilidade # Adicione remover_ponto aqui
+from .views import CustomLoginView, RegisterView, home, salvar_ponto, remover_ponto, atualizar_disponibilidade, geocodificar_endereco
 from django.contrib.auth.views import LogoutView
 
 urlpatterns = [
@@ -10,6 +10,7 @@ urlpatterns = [
     path('home/', home, name='home'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('salvar-ponto/', salvar_ponto, name='salvar_ponto'),
+    path('geocodificar-endereco/', geocodificar_endereco, name='geocodificar_endereco'),
     
     # NOVA ROTA: O <int:id> captura o ID que o JavaScript envia na URL
     path('remover-ponto/<int:id>/', remover_ponto, name='remover_ponto'),

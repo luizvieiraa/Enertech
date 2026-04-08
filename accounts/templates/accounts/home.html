@@ -8,25 +8,24 @@
     <span class="topbar-badge">Ao vivo</span>
 {% endblock %}
 
-{% block topbar_actions %}
-    {% if user.is_staff or user.is_superuser %}
-        <button class="btn" onclick="abrirFormulario()" style="width:auto;padding:8px 20px;">
-            ➕ Novo Ponto
-        </button>
-    {% endif %}
-{% endblock %}
+{% block topbar_actions %}{% endblock %}
 
 {% block content %}
 
 <div class="main-content-wrapper">
-    <div class="map-container"><div id="map"></div></div>
-
-    <div class="sidebar-list">
-        <div class="sidebar-list-header">
-            Eletropostos
-            <span class="list-count" id="listCount">0</span>
+    <div class="map-container">
+        <div id="map"></div>
+        
+        <!-- Caixa de eletropostos próximos -->
+        <div id="proximosBox" class="proximos-box" style="display: none;">
+            <div class="proximos-header">
+                <span class="proximos-title">📍 Pertos de Você (10km)</span>
+                <button class="proximos-close" onclick="fecharProximos()">✕</button>
+            </div>
+            <div class="proximos-content" id="proximosLista">
+                <!-- Carregado dinamicamente -->
+            </div>
         </div>
-        <div id="itens-lista" class="list-scroll"></div>
     </div>
 </div>
 
@@ -39,6 +38,14 @@
         <div class="form-group">
             <label class="form-label">Nome do Posto</label>
             <input type="text" id="nome_posto" class="form-control" placeholder="Ex: Posto Graças Center">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Endereço</label>
+            <div style="display:flex;gap:8px;align-items:flex-end;">
+                <input type="text" id="endereco_campo" class="form-control" placeholder="Ex: Rua das Flores, 123, Recife, PE" style="flex:1;">
+                <button type="button" class="btn btn-small" onclick="buscarEndereco()" style="white-space:nowrap;">Buscar 🔍</button>
+            </div>
+            <div id="endereco_resultado" style="font-size:12px;color:#94a3b8;margin-top:6px;"></div>
         </div>
         <div class="form-group">
             <label class="form-label">Coordenadas</label>
