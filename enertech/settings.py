@@ -178,11 +178,25 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 # ================================
 CSRF_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_HTTPONLY = False
-CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if os.getenv('CSRF_TRUSTED_ORIGINS') else []
+CSRF_COOKIE_AGE = 31449600
 
-# Permitir requisições para APIs externas (Nominatim)
+# Configurar CSRF_TRUSTED_ORIGINS de forma dinâmica e segura
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.onrender.com',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+]
+
+# Adicionar origem do Render se estiver em produção
 if os.getenv('RENDER_EXTERNAL_URL'):
-    CSRF_TRUSTED_ORIGINS.append(os.getenv('RENDER_EXTERNAL_URL'))
+    render_url = os.getenv('RENDER_EXTERNAL_URL').replace('https://', '').replace('http://', '')
+    CSRF_TRUSTED_ORIGINS.append(f'https://{render_url}')
+    CSRF_TRUSTED_ORIGINS.append(f'http://{render_url}')
+
+# Adicionar origem customizada se estiver em env
+if os.getenv('CSRF_TRUSTED_ORIGINS'):
+    custom_origins = os.getenv('CSRF_TRUSTED_ORIGINS').split(',')
+    CSRF_TRUSTED_ORIGINS.extend([origin.strip() for origin in custom_origins if origin.strip()])
 
 # Configurações para HTTPS em produção
 if not DEBUG:
@@ -195,13 +209,6 @@ if not DEBUG:
         'style-src': ("'self'", "'unsafe-inline'", 'fonts.googleapis.com'),
         'font-src': ("'self'", 'fonts.gstatic.com'),
     }
-CSRF_COOKIE_AGE = 31449600
-
-CSRF_TRUSTED_ORIGINS = [
-    'https://*.onrender.com',
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
-]
 
 
 # ================================
