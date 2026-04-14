@@ -30,6 +30,9 @@ class Ponto(models.Model):
     preco_ociosidade = models.FloatField(default=0)
     # tipos_carregador mantido para compatibilidade com filtros
     tipos_carregador = models.CharField(max_length=200, default='', blank=True)
+    # Horários de funcionamento
+    horario_abertura = models.TimeField(default='08:00', help_text="Horário de abertura (HH:MM)")
+    horario_fechamento = models.TimeField(default='20:00', help_text="Horário de fechamento (HH:MM)")
     criado_em        = models.DateTimeField(auto_now_add=True)
 
     # ── helpers ──
@@ -50,6 +53,36 @@ class Ponto(models.Model):
 
     def total_vagas(self):
         return self.conectores.exclude(status='inativo').count()
+
+    def esta_aberto(self, datetime_obj=None):
+        """
+        Verifica se o posto está aberto em um determinado horário.
+        Se datetime_obj não for fornecido, usa o horário atual.
+        Retorna: (aberto: bool, mensagem: str)
+        """
+        from datetime import datetime
+        
+        if datetime_obj is None:
+            datetime_obj = datetime.now()
+        
+        hora_atual = datetime_obj.time()
+        
+        # Comparar horários
+        if self.horario_abertura <= hora_atual < self.horario_fechamento:
+            return True, f"Aberto até {self.horario_fechamento.strftime('%H:%M')}"
+        else:
+            return False, f"Fechado. Funciona de {self.horario_abertura.strftime('%H:%M')} até {self.horario_fechamento.strftime('%H:%M')}"
+
+    def esta_ocupado(self):
+        """
+        Verifica se há agendamentos em andamento neste ponto.
+        Retorna: (ocupado: bool, quantidade: int, mensagem: str)
+        """
+        agendamentos_em_andamento = self.agendamentos.filter(status='em_andamento').count()
+        if agendamentos_em_andamento > 0:
+            msg = f"🔴 Ocupado" if agendamentos_em_andamento == 1 else f"🔴 Ocupado ({agendamentos_em_andamento})"
+            return True, agendamentos_em_andamento, msg
+        return False, 0, "🟢 Disponível"
 
     def __str__(self):
         return self.nome
@@ -84,3 +117,44 @@ class Avaliacao(models.Model):
 
     def __str__(self):
         return f'{self.usuario.username} → {self.ponto.nome} ({self.estrelas}★)'
+
+
+class Agendamento(models.Model):
+    """Agendamento de recarga de veículo elétrico em um ponto de carregamento."""
+    
+    STATUS_CHOICES = [
+        ('pendente', 'Pendente'),
+        ('confirmado', 'Confirmado'),
+        ('em_andamento', 'Em Andamento'),
+        ('concluido', 'Concluído'),
+        ('cancelado', 'Cancelado'),
+    ]
+    
+    usuario             = models.ForeignKey(User, on_delete=models.CASCADE, related_name='agendamentos')
+    ponto               = models.ForeignKey(Ponto, on_delete=models.CASCADE, related_name='agendamentos')
+    conector            = models.ForeignKey(Conector, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    data_inicio         = models.DateTimeField(help_text="Data e hora do início da recarga agendada")
+    tempo_estimado      = models.IntegerField(default=60, help_text="Tempo estimado em minutos")
+    energia_solicitada  = models.FloatField(help_text="Energia solicitada em kWh")
+    
+    status              = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pendente')
+    valor_estimado      = models.FloatField(null=True, blank=True, help_text="Valor estimado em R$")
+    
+    criado_em           = models.DateTimeField(auto_now_add=True)
+    atualizado_em       = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-data_inicio']
+    
+    def calcular_valor_estimado(self):
+        """Calcula o valor estimado baseado na precificação do ponto."""
+        if self.ponto:
+            custo = self.ponto.preco_start
+            custo += self.energia_solicitada * self.ponto.preco_kwh
+            custo += (self.tempo_estimado / 60) * self.ponto.preco_ociosidade
+            self.valor_estimado = round(custo, 2)
+        return self.valor_estimado
+    
+    def __str__(self):
+        return f'{self.usuario.username} → {self.ponto.nome} em {self.data_inicio.strftime("%d/%m %H:%M")}'

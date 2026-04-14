@@ -1,5 +1,6 @@
 let map;
 let markers = {};
+let markerLocalizacaoUsuario = null;
 let dadosPontos = [];
 let usuarioLogadoEhAdmin = false;
 let tiposFiltroAtivos = ['todos'];
@@ -11,6 +12,9 @@ let pontoEditandoDisp = null;
 let pontoAvaliacaoAtual = null;
 let estrelasEscolhidas = 0;
 let conectorFormCount = 0;
+
+// Variáveis para agendamento
+let pontoAgendamentoAtual = null;
 
 const TIPOS_LABEL = {
     tipo1: 'Tipo 1 (J1772)',
@@ -52,6 +56,18 @@ function initDashboard(pontosIniciais, ehAdmin) {
         
         // Obter localização do usuário
         obterLocalizacaoUsuario();
+        
+        // Adicionar suporte a wheel para o input de distância
+        const distanciaInput = document.getElementById('inputDistancia');
+        if (distanciaInput) {
+            distanciaInput.addEventListener('wheel', function(e) {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -1 : 1;
+                const novoValor = Math.max(1, Math.min(100, parseInt(this.value) + delta));
+                this.value = novoValor;
+                atualizarDistanciaFiltro();
+            });
+        }
     });
 }
 
@@ -139,6 +155,38 @@ function buildPopupHtml(p) {
         ? `🟢 <strong>${livres} vaga${livres !== 1 ? 's' : ''} livre${livres !== 1 ? 's' : ''}</strong>`
         : '🔴 <strong>Todas as vagas ocupadas</strong>';
 
+    // Verificar se está aberto
+    const agora = new Date();
+    const horaAtual = agora.getHours().toString().padStart(2, '0') + ':' + 
+                      agora.getMinutes().toString().padStart(2, '0');
+    const abremEm = p.horario_abertura || '08:00';
+    const fechamEm = p.horario_fechamento || '20:00';
+    
+    const estaAberto = horaAtual >= abremEm && horaAtual < fechamEm;
+    const corHorario = estaAberto ? '#00e676' : '#ff6b6b';
+    const statusHorario = estaAberto 
+        ? `🟢 Aberto até ${fechamEm}` 
+        : `🔴 Fechado. Abre às ${abremEm}`;
+    
+    // Verificar se está ocupado
+    const estaOcupado = p.ocupado || false;
+    const statusOcupacao = estaOcupado ? p.status_ocupacao : '';
+    
+    // Botão de agendar desabilidado se fechado
+    const btnAgendarHtml = estaAberto
+        ? `<button onclick="abrirAgendamento(${p.id})"
+                style="flex:1;min-width:80px;padding:8px;background:rgba(0,180,220,0.15);
+                       border:1px solid rgba(0,180,220,0.35);border-radius:8px;
+                       color:#0db8de;font-weight:700;font-size:11px;cursor:pointer;">
+                📅 Agendar
+            </button>`
+        : `<button disabled
+                style="flex:1;min-width:80px;padding:8px;background:rgba(100,100,100,0.1);
+                       border:1px solid rgba(100,100,100,0.3);border-radius:8px;
+                       color:#666;font-weight:700;font-size:11px;cursor:not-allowed;opacity:0.6;">
+                📅 Fechado
+            </button>`;
+
     const conectoresHtml = (p.conectores || []).map((c) => {
         const cor = c.status === 'livre' ? '#00e676' : c.status === 'ocupado' ? '#ff3d5a' : '#94a3b8';
         const dot = `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${cor};margin-right:5px;"></span>`;
@@ -154,6 +202,8 @@ function buildPopupHtml(p) {
     return `
         <div style="min-width:200px;font-family:'DM Sans',sans-serif;">
             <strong style="font-size:14px;color:#e8f4fd;">${p.nome}</strong>
+            <div style="margin:8px 0 4px;font-size:12px;color:${corHorario};">${statusHorario}</div>
+            ${estaOcupado ? `<div style="margin:4px 0;font-size:12px;color:#ff6b6b;">${statusOcupacao}</div>` : ''}
             <div style="margin:8px 0 4px;font-size:12px;color:${corStatus};">${txtStatus}</div>
             ${conectoresHtml ? `<div style="background:rgba(0,0,0,0.2);border-radius:8px;padding:8px;margin:6px 0;">${conectoresHtml}</div>` : ''}
             <hr style="border-color:rgba(0,230,118,0.15);margin:8px 0;">
@@ -163,15 +213,16 @@ function buildPopupHtml(p) {
                 R$ ${p.preco_ociosidade.toFixed(2)}/min
             </div>
             <div style="font-size:13px;color:#f59e0b;margin-bottom:10px;">${mediaHtml}</div>
-            <div style="display:flex;gap:7px;">
+            <div style="display:flex;gap:7px;flex-wrap:wrap;">
+                ${btnAgendarHtml}
                 <button onclick="abrirAvaliacao(${p.id})"
-                    style="flex:1;padding:8px;background:rgba(0,230,118,0.12);
+                    style="flex:1;min-width:70px;padding:8px;background:rgba(0,230,118,0.12);
                            border:1px solid rgba(0,230,118,0.3);border-radius:8px;
                            color:#00e676;font-weight:700;font-size:11px;cursor:pointer;">
                     ★ Avaliar
                 </button>
                 <a href="${gmUrl}" target="_blank" rel="noopener"
-                    style="flex:1;padding:8px;background:rgba(66,133,244,0.15);
+                    style="flex:1;min-width:60px;padding:8px;background:rgba(66,133,244,0.15);
                            border:1px solid rgba(66,133,244,0.35);border-radius:8px;
                            color:#6ba3f5;font-weight:700;font-size:11px;
                            text-decoration:none;text-align:center;display:flex;
@@ -200,6 +251,7 @@ function obterLocalizacaoUsuario() {
                 lng: position.coords.longitude
             };
             console.log('📍 Localização obtida:', localizacaoUsuario);
+            adicionarMarkerLocalizacaoUsuario();
             atualizarProximos();
         },
         (error) => {
@@ -208,6 +260,57 @@ function obterLocalizacaoUsuario() {
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
 }
+
+function buildUserLocationHtml() {
+    return `
+        <div style="text-align:center;position:relative;">
+            <div style="
+                width:20px;
+                height:20px;
+                background:rgba(0,180,220,0.15);
+                border:2px solid #0db8de;
+                border-radius:50%;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                box-shadow:0 0 0 0 #0db8de;
+                animation:pulsoUsuario 2s infinite;
+            ">
+                <div style="
+                    width:8px;
+                    height:8px;
+                    background:#0db8de;
+                    border-radius:50%;
+                "></div>
+            </div>
+        </div>`;
+}
+
+function adicionarMarkerLocalizacaoUsuario() {
+    if (!localizacaoUsuario || !map) return;
+    
+    // Remover marcador anterior se existir
+    if (markerLocalizacaoUsuario) {
+        markerLocalizacaoUsuario.remove();
+    }
+    
+    const markerEl = document.createElement('div');
+    markerEl.innerHTML = buildUserLocationHtml();
+    markerEl.style.cursor = 'default';
+    
+    markerLocalizacaoUsuario = new maplibregl.Marker({ element: markerEl })
+        .setLngLat([localizacaoUsuario.lng, localizacaoUsuario.lat])
+        .addTo(map);
+    
+    // Centralizar o mapa na localização do usuário com animação suave
+    map.flyTo({
+        center: [localizacaoUsuario.lng, localizacaoUsuario.lat],
+        zoom: 16,
+        duration: 1500,
+        easing: (t) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
+    });
+}
+
 
 function calcularDistancia(lat1, lng1, lat2, lng2) {
     // Fórmula de Haversine para calcular distância entre dois pontos
@@ -233,7 +336,11 @@ function atualizarProximos() {
         return;
     }
 
-    // Filtrar eletropostos dentro de 10km APLICANDO OS FILTROS DA SIDEBAR
+    // Obter a distância configurada no filtro
+    const distanciaInput = document.getElementById('inputDistancia');
+    const distanciaMaxima = distanciaInput ? parseInt(distanciaInput.value) : 10;
+
+    // Filtrar eletropostos dentro da distância APLICANDO OS FILTROS DA SIDEBAR
     const filtrados = getPontosFiltrados();
     const proximos = filtrados
         .map((p) => ({
@@ -245,11 +352,11 @@ function atualizarProximos() {
                 p.lng
             )
         }))
-        .filter((p) => p.distancia <= 10)
+        .filter((p) => p.distancia <= distanciaMaxima)
         .sort((a, b) => a.distancia - b.distancia);
 
     if (proximos.length === 0) {
-        lista.innerHTML = '<div class="proximos-empty">Nenhum eletroposto a 10km de você</div>';
+        lista.innerHTML = `<div class="proximos-empty">Nenhum eletroposto a ${distanciaMaxima}km de você</div>`;
         box.style.display = 'flex';
         return;
     }
@@ -370,6 +477,7 @@ function getPontosFiltrados() {
     const termo = (document.getElementById('inputBusca')?.value || '').toLowerCase();
     const maxKwh = parseFloat(document.getElementById('inputKwh')?.value ?? 5);
     const minKw = parseFloat(document.getElementById('inputKw')?.value ?? 0);
+    const distanciaMaxima = parseFloat(document.getElementById('inputDistancia')?.value ?? 10);
 
     return dadosPontos.filter((p) => {
         const nomeBate = p.nome.toLowerCase().includes(termo);
@@ -381,7 +489,20 @@ function getPontosFiltrados() {
             : dispFiltroAtivo === 'livres' ? p.vagas_livres > 0
                 : dispFiltroAtivo === 'ocupado' ? (p.vagas_livres === 0 && p.total_vagas > 0)
                     : true;
-        return nomeBate && kwhBate && kwBate && tipoBate && dispBate;
+        
+        // Filtro de distância (apenas se usuário tem localização)
+        let distanciaBate = true;
+        if (localizacaoUsuario) {
+            const distancia = calcularDistancia(
+                localizacaoUsuario.lat, 
+                localizacaoUsuario.lng, 
+                p.lat, 
+                p.lng
+            );
+            distanciaBate = distancia <= distanciaMaxima;
+        }
+        
+        return nomeBate && kwhBate && kwBate && tipoBate && dispBate && distanciaBate;
     });
 }
 
@@ -406,13 +527,35 @@ function aplicarFiltros() {
     atualizarProximos();
 }
 
+function atualizarDistanciaFiltro() {
+    const distancia = parseFloat(document.getElementById('inputDistancia')?.value ?? 10);
+    const lDistancia = document.getElementById('labelDistancia');
+    if (lDistancia) lDistancia.textContent = `${distancia} km`;
+    
+    // Atualizar visibilidade dos ícones no mapa
+    const filtradosIds = new Set(getPontosFiltrados().map((p) => p.id));
+    dadosPontos.forEach((p) => {
+        if (markers[p.id]) {
+            if (filtradosIds.has(p.id)) {
+                markers[p.id].getElement().style.display = 'block';
+            } else {
+                markers[p.id].getElement().style.display = 'none';
+            }
+        }
+    });
+    
+    atualizarProximos();
+}
+
 function resetarFiltros() {
     const b = document.getElementById('inputBusca');
     const k = document.getElementById('inputKwh');
     const w = document.getElementById('inputKw');
+    const d = document.getElementById('inputDistancia');
     if (b) b.value = '';
     if (k) k.value = k.max;
     if (w) w.value = 0;
+    if (d) d.value = 10;
 
     tiposFiltroAtivos = ['todos'];
     dispFiltroAtivo = 'todos';
@@ -423,6 +566,7 @@ function resetarFiltros() {
         c.classList.toggle('sb-chip--active', c.dataset.disp === 'todos'));
 
     aplicarFiltros();
+    atualizarDistanciaFiltro();
 }
 
 function toggleChip(el) {
@@ -540,6 +684,8 @@ window.salvarPonto = function () {
     const preco_start = document.getElementById('preco_start').value;
     const preco_kwh = document.getElementById('preco_kwh').value;
     const preco_ociosidade = document.getElementById('preco_ociosidade').value;
+    const horario_abertura = document.getElementById('horario_abertura').value;
+    const horario_fechamento = document.getElementById('horario_fechamento').value;
     const conectores = getConectoresDoForm();
     const tipos_carregador = [...new Set(conectores.map((c) => c.tipo))];
 
@@ -553,7 +699,7 @@ window.salvarPonto = function () {
     fetch('/salvar-ponto/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
-        body: JSON.stringify({ nome, lat, lng, consumo, preco_start, preco_kwh, preco_ociosidade, tipos_carregador, conectores }),
+        body: JSON.stringify({ nome, lat, lng, consumo, preco_start, preco_kwh, preco_ociosidade, horario_abertura, horario_fechamento, tipos_carregador, conectores }),
     })
         .then((r) => r.json())
         .then((data) => {
@@ -567,6 +713,8 @@ window.salvarPonto = function () {
                     preco_start: parseFloat(preco_start) || 0,
                     preco_kwh: parseFloat(preco_kwh) || 0,
                     preco_ociosidade: parseFloat(preco_ociosidade) || 0,
+                    horario_abertura,
+                    horario_fechamento,
                     tipos: tipos_carregador,
                     media: null,
                     total_aval: 0,
@@ -823,7 +971,31 @@ function abrirSidebarDetalhes(pontoId) {
 
     document.getElementById('detalhesNome').textContent = ponto.nome;
     
+    // Verificar se está aberto
+    const agora = new Date();
+    const horaAtual = agora.getHours().toString().padStart(2, '0') + ':' + 
+                      agora.getMinutes().toString().padStart(2, '0');
+    const abremEm = ponto.horario_abertura || '08:00';
+    const fechamEm = ponto.horario_fechamento || '20:00';
+    
+    const estaAberto = horaAtual >= abremEm && horaAtual < fechamEm;
+    const corHorario = estaAberto ? '#00e676' : '#ff6b6b';
+    const statusHorarioLabel = estaAberto 
+        ? `🟢 Aberto até ${fechamEm}` 
+        : `🔴 Fechado. Abre às ${abremEm}`;
+    
     let conteudo = `
+        <div class="detalhe-section">
+            <div class="detalhe-label">Status Operacional</div>
+            <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: ${estaAberto ? 'rgba(0, 230, 118, 0.1)' : 'rgba(255, 107, 107, 0.1)'}; border-radius: 6px; border: 1px solid ${estaAberto ? 'rgba(0, 230, 118, 0.3)' : 'rgba(255, 107, 107, 0.3)'};">
+                <span style="font-size: 16px;">${estaAberto ? '🟢' : '🔴'}</span>
+                <div>
+                    <div style="font-weight: 600; color: ${corHorario};">${estaAberto ? 'Aberto' : 'Fechado'}</div>
+                    <div style="font-size: 12px; color: #94a3b8;">Funciona de ${abremEm} às ${fechamEm}</div>
+                </div>
+            </div>
+        </div>
+
         <div class="detalhe-section">
             <div class="detalhe-label">Status de Disponibilidade</div>
             <div class="detalhe-status ${ponto.vagas_livres > 0 ? 'livre' : 'ocupado'}">
@@ -833,6 +1005,19 @@ function abrirSidebarDetalhes(pontoId) {
                     : `Todas as ${ponto.total_vagas} vaga${ponto.total_vagas !== 1 ? 's' : ''} ocupadas`}
             </div>
         </div>
+
+        ${ponto.ocupado ? `
+        <div class="detalhe-section">
+            <div class="detalhe-label">Status de Ocupação</div>
+            <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: rgba(255, 107, 107, 0.1); border-radius: 6px; border: 1px solid rgba(255, 107, 107, 0.3);">
+                <span style="font-size: 16px;">🔴</span>
+                <div>
+                    <div style="font-weight: 600; color: #ff6b6b;">Em Andamento</div>
+                    <div style="font-size: 12px; color: #94a3b8;">${ponto.status_ocupacao}</div>
+                </div>
+            </div>
+        </div>
+        ` : ''}
 
         <div class="detalhe-section">
             <div class="detalhe-label">Avaliação</div>
@@ -901,6 +1086,14 @@ function abrirSidebarDetalhes(pontoId) {
             <button class="detalhe-btn" onclick="focarPonto(${ponto.lat}, ${ponto.lng}, ${ponto.id})">
                 📍 Focar no Mapa
             </button>
+            ${estaAberto
+                ? `<button class="detalhe-btn" onclick="abrirAgendamento(${ponto.id})">
+                    📅 Agendar
+                  </button>`
+                : `<button class="detalhe-btn" disabled style="opacity: 0.6; cursor: not-allowed; background: rgba(100, 100, 100, 0.1);">
+                    🔒 Fechado
+                  </button>`
+            }
             <button class="detalhe-btn" onclick="abrirAvaliacao(${ponto.id})">
                 ⭐ Avaliar
             </button>
@@ -965,3 +1158,213 @@ function toggleFilterPanel() {
         btnText.textContent = 'Fechar Filtros';
     }
 }
+
+/* ========================================= */
+/* AGENDAMENTO DE RECARGA                    */
+/* ========================================= */
+
+window.abrirAgendamento = function(pontoId) {
+    pontoAgendamentoAtual = pontoId;
+    const ponto = dadosPontos.find((p) => p.id === pontoId);
+    if (!ponto) return;
+
+    document.getElementById('agendPostoInfo').innerHTML = `
+        <div style="background: rgba(0, 230, 118, 0.1); padding: 10px; border-radius: 8px; border: 1px solid rgba(0, 230, 118, 0.3);">
+            <div style="font-weight: 600; color: #e0f2fe;">${ponto.nome}</div>
+            <div style="font-size: 12px; margin-top: 5px;">
+                💰 R$ ${ponto.preco_start.toFixed(2)} início · R$ ${ponto.preco_kwh.toFixed(2)}/kWh
+            </div>
+            <div style="font-size: 12px; margin-top: 3px;">
+                ⏰ Funciona de ${ponto.horario_abertura || '08:00'} às ${ponto.horario_fechamento || '20:00'}
+            </div>
+        </div>
+    `;
+
+    // Definir data/hora mínima como agora
+    const agora = new Date();
+    const dataMinima = new Date(agora.getTime() + 30 * 60000); // 30 minutos a partir de agora
+    document.getElementById('agendData').min = dataMinima.toISOString().slice(0, 16);
+    document.getElementById('agendData').value = dataMinima.toISOString().slice(0, 16);
+
+    // Limpar aviso de horário
+    document.getElementById('agendHorarioAviso').style.display = 'none';
+    document.getElementById('agendHorarioStatus').textContent = '';
+    document.getElementById('btnConfirmarAgendamento').disabled = false;
+
+    // Recompute valor estimado ao abrir
+    atualizarValorAgendamento();
+    validarHorarioAgendamento();
+
+    document.getElementById('modalAgendamento').style.display = 'flex';
+};
+
+window.fecharAgendamento = function() {
+    document.getElementById('modalAgendamento').style.display = 'none';
+    pontoAgendamentoAtual = null;
+};
+
+window.atualizarValorAgendamento = function() {
+    const ponto = dadosPontos.find((p) => p.id === pontoAgendamentoAtual);
+    if (!ponto) return;
+
+    const tempo = parseFloat(document.getElementById('agendTempo').value) || 60;
+    const energia = parseFloat(document.getElementById('agendEnergia').value) || 10;
+
+    const valor = ponto.preco_start + (energia * ponto.preco_kwh) + ((tempo / 60) * ponto.preco_ociosidade);
+    document.getElementById('agendValorEstimado').textContent = `R$ ${valor.toFixed(2)}`;
+};
+
+window.validarHorarioAgendamento = function() {
+    if (!pontoAgendamentoAtual) return;
+    
+    const ponto = dadosPontos.find((p) => p.id === pontoAgendamentoAtual);
+    if (!ponto) return;
+    
+    const dataStr = document.getElementById('agendData').value;
+    if (!dataStr) return;
+    
+    const data = new Date(dataStr);
+    const horas = data.getHours().toString().padStart(2, '0');
+    const minutos = data.getMinutes().toString().padStart(2, '0');
+    const horaAtual = `${horas}:${minutos}`;
+    
+    const abremEm = ponto.horario_abertura || '08:00';
+    const fechamEm = ponto.horario_fechamento || '20:00';
+    
+    const estaAberto = horaAtual >= abremEm && horaAtual < fechamEm;
+    
+    const avisoEl = document.getElementById('agendHorarioAviso');
+    const statusEl = document.getElementById('agendHorarioStatus');
+    const btnConfirmar = document.getElementById('btnConfirmarAgendamento');
+    
+    if (!estaAberto) {
+        avisoEl.style.display = 'block';
+        document.getElementById('agendHorarioAvisoMsg').textContent = 
+            `Este horário (${horaAtual}) está fora do período de funcionamento (${abremEm} às ${fechamEm}). O agendamento será recusado.`;
+        statusEl.textContent = `❌ Horário fora de funcionamento`;
+        statusEl.style.color = '#ff6b6b';
+        btnConfirmar.disabled = true;
+        btnConfirmar.style.opacity = '0.5';
+        btnConfirmar.style.cursor = 'not-allowed';
+    } else {
+        avisoEl.style.display = 'none';
+        statusEl.textContent = `✓ Horário válido`;
+        statusEl.style.color = '#00e676';
+        btnConfirmar.disabled = false;
+        btnConfirmar.style.opacity = '1';
+        btnConfirmar.style.cursor = 'pointer';
+    }
+};
+
+window.confirmarAgendamento = function() {
+    if (!pontoAgendamentoAtual) return;
+
+    const ponto = dadosPontos.find((p) => p.id === pontoAgendamentoAtual);
+    if (!ponto) return;
+
+    const data = document.getElementById('agendData').value;
+    const tempo = parseInt(document.getElementById('agendTempo').value) || 60;
+    const energia = parseFloat(document.getElementById('agendEnergia').value) || 10;
+
+    if (!data) {
+        showToast('Selecione data e hora!', 'danger');
+        return;
+    }
+
+    // Validar horário novamente antes de enviar
+    const dataObj = new Date(data);
+    const horas = dataObj.getHours().toString().padStart(2, '0');
+    const minutos = dataObj.getMinutes().toString().padStart(2, '0');
+    const horaAtual = `${horas}:${minutos}`;
+    
+    const abremEm = ponto.horario_abertura || '08:00';
+    const fechamEm = ponto.horario_fechamento || '20:00';
+    
+    if (horaAtual < abremEm || horaAtual >= fechamEm) {
+        showToast(`❌ Não é permitido agendar fora do horário de funcionamento (${abremEm} até ${fechamEm})`, 'danger');
+        return;
+    }
+
+    showToast('Criando agendamento...', 'info');
+
+    fetch('/agendamentos/criar/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify({
+            ponto_id: pontoAgendamentoAtual,
+            data_inicio: data,
+            tempo_estimado: tempo,
+            energia_solicitada: energia
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'sucesso') {
+            showToast(`✅ Agendamento criado! Aguardando confirmação do administrador.`, 'success');
+            fecharAgendamento();
+        } else {
+            showToast(`Erro: ${data.error || 'Erro desconhecido'}`, 'danger');
+        }
+    })
+    .catch(err => {
+        console.error('Erro:', err);
+        showToast('Erro ao criar agendamento', 'danger');
+    });
+};
+
+window.abrirMeusAgendamentos = function() {
+    showToast('Carregando seus agendamentos...', 'info');
+
+    fetch('/agendamentos/meus/')
+        .then(r => r.json())
+        .then(data => {
+            const agendamentos = data.agendamentos;
+            if (agendamentos.length === 0) {
+                showToast('Você não tem agendamentos', 'info');
+                return;
+            }
+
+            let html = '<div style="max-width: 600px; max-height: 80vh; overflow-y: auto;">';
+            agendamentos.forEach(agend => {
+                const data = new Date(agend.data_inicio).toLocaleString('pt-BR');
+                const statusCor = agend.status === 'pendente' ? '#fbbf24'
+                    : agend.status === 'confirmado' ? '#3b82f6'
+                    : agend.status === 'em_andamento' ? '#f97316'
+                    : agend.status === 'concluido' ? '#22c55e'
+                    : '#ef4444';
+                
+                html += `
+                    <div style="background: rgba(30, 30, 30, 0.8); padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(0, 230, 118, 0.2);">
+                        <div style="font-weight: 600; color: #e0f2fe; margin-bottom: 5px;">${agend.ponto_nome}</div>
+                        <div style="font-size: 12px; color: #94a3b8; margin-bottom: 3px;">📅 ${data}</div>
+                        <div style="font-size: 12px; color: #94a3b8; margin-bottom: 3px;">⚡ ${agend.energia_solicitada} kWh · ⏱️ ${agend.tempo_estimado}min</div>
+                        <div style="font-size: 12px; color: #94a3b8; margin-bottom: 5px;">💰 R$ ${agend.valor_estimado || '0,00'}</div>
+                        <div style="display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; color: ${statusCor}; background: ${statusCor}33;">
+                            ${agend.status.charAt(0).toUpperCase() + agend.status.slice(1)}
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+
+            // Mostrar modal provisório com agendamentos
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.style.display = 'flex';
+            modal.innerHTML = `
+                <div class="card" style="max-width: 600px;">
+                    <div class="card-title">📅 Meus Agendamentos</div>
+                    ${html}
+                    <button class="btn" onclick="this.closest('.modal-overlay').remove();" style="width: 100%; margin-top: 12px;">Fechar</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        })
+        .catch(err => {
+            console.error('Erro:', err);
+            showToast('Erro ao carregar agendamentos', 'danger');
+        });
+};

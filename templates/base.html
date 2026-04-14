@@ -3,7 +3,11 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0, user-scalable=yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="app-mobile-web-app-title" content="Enertech">
+    <meta name="theme-color" content="#04080f">
     <title>{% block title %}Enertech{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     {% block extra_css %}{% endblock %}
@@ -12,7 +16,7 @@
     {% endblock %}
 </head>
 
-<body class="{% if user.is_authenticated %}logged{% endif %}">
+<body class="{% if user.is_authenticated %}logged{% endif %}">>
 
 <div id="toastContainer" class="toast-container"></div>
 
@@ -58,6 +62,15 @@
                        oninput="aplicarFiltros()">
             </div>
             <div class="sb-filter-block">
+                <div class="sb-filter-label">
+                    Distância máx.
+                    <span class="sb-filter-val" id="labelDistancia">10 km</span>
+                </div>
+                <input type="range" id="inputDistancia" class="sb-range"
+                       min="1" max="100" step="1" value="10"
+                       oninput="atualizarDistanciaFiltro()">
+            </div>
+            <div class="sb-filter-block">
                 <div class="sb-filter-label">Disponibilidade</div>
                 <div class="sb-chips">
                     <button class="sb-chip sb-chip--active" data-disp="todos" onclick="toggleDisp(this)">Todos</button>
@@ -97,6 +110,10 @@
             <a href="#" class="sb-nav-link" onclick="abrirFormulario(); return false;">
                 <span class="sb-nav-icon">➕</span>
                 <span>Novo Ponto</span>
+            </a>
+            <a href="{% url 'admin_agendamentos' %}" class="sb-nav-link">
+                <span class="sb-nav-icon">📅</span>
+                <span>Agendamentos</span>
             </a>
             {% endif %}
         </nav>

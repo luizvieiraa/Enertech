@@ -19,7 +19,7 @@
         <!-- Caixa de eletropostos próximos -->
         <div id="proximosBox" class="proximos-box" style="display: none;">
             <div class="proximos-header">
-                <span class="proximos-title">📍 Pertos de Você (10km)</span>
+                <span class="proximos-title">📍 Pertos de Você</span>
                 <button class="proximos-close" onclick="fecharProximos()">✕</button>
             </div>
             <div class="proximos-content" id="proximosLista">
@@ -58,6 +58,22 @@
             <label class="form-label">Potência geral (kW)</label>
             <input type="number" id="consumo" class="form-control" placeholder="Ex: 50">
         </div>
+        
+        <!-- HORÁRIOS DE FUNCIONAMENTO -->
+        <div class="form-group">
+            <label class="form-label">Horários de Funcionamento</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div>
+                    <div class="preco-label">Abertura</div>
+                    <input type="time" id="horario_abertura" class="form-control" value="08:00">
+                </div>
+                <div>
+                    <div class="preco-label">Fechamento</div>
+                    <input type="time" id="horario_fechamento" class="form-control" value="20:00">
+                </div>
+            </div>
+        </div>
+        
         <div class="form-group">
             <label class="form-label">Precificação</label>
             <div class="preco-grid">
@@ -149,6 +165,46 @@
     </div>
 </div>
 
+<!-- MODAL DE AGENDAMENTO -->
+<div id="modalAgendamento" class="modal-overlay" style="display:none;">
+    <div class="card" style="max-width:600px;">
+        <div class="card-title">📅 Agendar Recarga</div>
+        <div id="agendPostoInfo" style="color: #94a3b8; font-size: 13px; margin-bottom: 15px;"></div>
+        
+        <div id="agendHorarioAviso" style="background: rgba(255, 107, 107, 0.1); padding: 10px; border-radius: 8px; border: 1px solid rgba(255, 107, 107, 0.3); margin-bottom: 15px; display: none;">
+            <div style="color: #ff6b6b; font-weight: 600; font-size: 12px;">⚠️ Horário Fora de Funcionamento</div>
+            <div id="agendHorarioAvisoMsg" style="color: #ff9999; font-size: 11px; margin-top: 5px;"></div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Data e Hora</label>
+            <input type="datetime-local" id="agendData" class="form-control" onchange="validarHorarioAgendamento()">
+            <div id="agendHorarioStatus" style="font-size: 11px; color: #94a3b8; margin-top: 5px;"></div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Tempo Estimado (minutos)</label>
+            <input type="number" id="agendTempo" class="form-control" value="60" min="30" step="15" onchange="atualizarValorAgendamento()">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Energia Solicitada (kWh)</label>
+            <input type="number" id="agendEnergia" class="form-control" value="10" min="1" step="0.5" onchange="atualizarValorAgendamento()">
+        </div>
+        
+        <div class="form-group" style="background: rgba(0, 230, 118, 0.1); padding: 12px; border-radius: 10px; border: 1px solid rgba(0, 230, 118, 0.3);">
+            <div style="color: #94a3b8; font-size: 12px;">Valor Estimado</div>
+            <div id="agendValorEstimado" style="font-size: 20px; color: #00e676; font-weight: bold; margin-top: 5px;">R$ 0,00</div>
+        </div>
+        
+        <div style="display:flex;gap:10px;margin-top:20px;">
+            <button class="btn" id="btnConfirmarAgendamento" onclick="confirmarAgendamento()">Agendar Recarga</button>
+            <button class="btn" onclick="fecharAgendamento()"
+                    style="background:rgba(51,65,85,0.8);color:#94a3b8;box-shadow:none;">Cancelar</button>
+        </div>
+    </div>
+</div>
+
 <script src="{% static 'accounts/js/dashboard.js' %}"></script>
 
 <script>
@@ -164,6 +220,8 @@
                 preco_start:      {{ p.preco_start|default:0 }},
                 preco_kwh:        {{ p.preco_kwh|default:0 }},
                 preco_ociosidade: {{ p.preco_ociosidade|default:0 }},
+                horario_abertura: "{{ p.horario_abertura|default:'08:00'|escapejs }}",
+                horario_fechamento: "{{ p.horario_fechamento|default:'20:00'|escapejs }}",
                 tipos_carregador: "{{ p.tipos_carregador|default:'' }}",
                 media:            {{ p.media_avaliacoes|default:'null' }},
                 total_aval:       {{ p.total_avaliacoes }},

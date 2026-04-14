@@ -1,2 +1,25 @@
 __pycache__/
 *.py[cod]
+*.pyo
+*.pyc
+
+# Banco de dados local
+db.sqlite3
+
+# Variáveis de ambiente
+.env
+.env.local
+
+# Virtual environment
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
