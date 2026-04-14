@@ -33,7 +33,7 @@ function initDashboard(pontosIniciais, ehAdmin) {
     // Inicializar Maplibre GL JS
     map = new maplibregl.Map({
         container: 'map',
-        style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+        style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
         center: [-34.8770, -8.0476],
         zoom: 15,
         pitch: 0,
@@ -68,6 +68,11 @@ function initDashboard(pontosIniciais, ehAdmin) {
                 atualizarDistanciaFiltro();
             });
         }
+        
+        // ═════════════════════════════════════════════════════════════════════
+        // Inicializar Theme Switcher
+        // ═════════════════════════════════════════════════════════════════════
+        inicializarThemeSwitcher();
     });
 }
 
@@ -1412,3 +1417,44 @@ window.abrirMeusAgendamentos = function() {
             showToast('Erro ao carregar agendamentos', 'danger');
         });
 };
+
+/* ═══════════════════════════════════════════════════════════════════ */
+/* 🎨 THEME SWITCHER - Troca de Temas do Mapa                        */
+/* ═══════════════════════════════════════════════════════════════════ */
+
+const MAPA_TEMAS = {
+    positron: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+    voyager: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+    'positron-nolabels': 'https://basemaps.cartocdn.com/gl/positron-nolabels-gl-style/style.json',
+    'voyager-nolabels': 'https://basemaps.cartocdn.com/gl/voyager-nolabels-gl-style/style.json',
+    'osm-bright': 'https://tiles.openstreetmap.se/osm-bright/style.json'
+};
+
+function inicializarThemeSwitcher() {
+    const selector = document.getElementById('mapThemeSelector');
+    if (!selector) return;
+    
+    // Carregar tema salvo (ou usar padrão)
+    const temaSalvo = localStorage.getItem('mapaTema') || 'positron';
+    selector.value = temaSalvo;
+    
+    // Listener para mudanças
+    selector.addEventListener('change', (e) => {
+        mudarTemaDoMapa(e.target.value);
+    });
+}
+
+function mudarTemaDoMapa(tema) {
+    if (!map || !MAPA_TEMAS[tema]) return;
+    
+    console.log(`🎨 Trocando tema para: ${tema}`);
+    
+    // Salvar preferência
+    localStorage.setItem('mapaTema', tema);
+    
+    // Aplicar novo tema
+    map.setStyle(MAPA_TEMAS[tema]);
+    
+    // Mostrar notificação
+    showToast(`🎨 Tema alterado para: ${tema === 'positron' ? 'Positron (Claro)' : tema === 'voyager' ? 'Voyager (Colorido)' : tema === 'positron-nolabels' ? 'Positron sem Nomes' : tema === 'voyager-nolabels' ? 'Voyager sem Nomes' : 'OSM Bright'}`, 'info');
+}
