@@ -636,43 +636,73 @@ window.buscarEndereco = async function() {
     resultadoEl.textContent = '🔄 Buscando...';
     resultadoEl.style.color = '#94a3b8';
     
-    try {
-        const response = await fetch('/geocodificar-endereco/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
-            },
-            body: JSON.stringify({ endereco })
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-            resultadoEl.textContent = `❌ ${data.error || 'Erro ao buscar endereço'}`;
-            resultadoEl.style.color = '#ff3d5a';
-            return;
-        }
-        
-        // Atualizar os campos lat/lng
-        document.getElementById('lat').value = data.lat.toFixed(6);
-        document.getElementById('lng').value = data.lng.toFixed(6);
-        
-        resultadoEl.textContent = `✅ ${data.endereco_completo}`;
-        resultadoEl.style.color = '#00e676';
-        
-        // Focar no mapa no endereço encontrado
-        if (map) {
-            map.flyTo({
-                center: [data.lng, data.lat],
-                zoom: 17,
-                duration: 1000
+    const maxRetries = 2;
+    let lastError = null;
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+            const response = await fetch('/geocodificar-endereco/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify({ endereco }),
+                timeout: 15000
             });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                const errorMsg = data.error || 'Erro ao buscar endereço';
+                
+                // Mensagens de erro mais amigáveis
+                if (response.status === 404) {
+                    resultadoEl.textContent = `❌ Endereço não encontrado. Tente ser mais específico.`;
+                } else if (response.status === 503 || response.status === 504) {
+                    if (attempt < maxRetries - 1) {
+                        resultadoEl.textContent = '🔄 Serviço indisponível, tentando novamente...';
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        continue;
+                    } else {
+                        resultadoEl.textContent = `❌ Serviço de mapas indisponível. Tente mais tarde.`;
+                    }
+                } else {
+                    resultadoEl.textContent = `❌ ${errorMsg}`;
+                }
+                resultadoEl.style.color = '#ff3d5a';
+                return;
+            }
+            
+            // Sucesso!
+            document.getElementById('lat').value = data.lat.toFixed(6);
+            document.getElementById('lng').value = data.lng.toFixed(6);
+            
+            resultadoEl.textContent = `✅ ${data.endereco_completo}`;
+            resultadoEl.style.color = '#00e676';
+            
+            // Focar no mapa no endereço encontrado
+            if (map) {
+                map.flyTo({
+                    center: [data.lng, data.lat],
+                    zoom: 17,
+                    duration: 1000
+                });
+            }
+            
+            return;
+            
+        } catch (error) {
+            lastError = error;
+            
+            if (attempt < maxRetries - 1) {
+                resultadoEl.textContent = '🔄 Tentando novamente...';
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            } else {
+                resultadoEl.textContent = `❌ Erro de conexão: ${error.message || 'Tente novamente'}`;
+                resultadoEl.style.color = '#ff3d5a';
+            }
         }
-        
-    } catch (error) {
-        resultadoEl.textContent = `❌ Erro: ${error.message}`;
-        resultadoEl.style.color = '#ff3d5a';
     }
 }
 

@@ -1,28 +1,204 @@
+# ================================
+# PYTHON / CACHE
+# ================================
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyc
+*.egg-info/
+*.eggs/
+*.egg
+dist/
+build/
+.Python
+*.so
+*.a
+*.o
+*.c
 
-# Banco de dados local
-db.sqlite3
-
-# Variáveis de ambiente
-.env
-.env.local
-
-# Virtual environment
+# ================================
+# VIRTUAL ENVIRONMENTS
+# ================================
 venv/
 env/
+ENV/
+env.bak/
+venv.bak/
+.venv
 
-# IDE
+# ================================
+# DJANGO
+# ================================
+# Local database
+db.sqlite3
+db.sqlite3-journal
+
+# Media files (uploads)
+/media/
+/media_files/
+
+# Static files (collectstatic)
+/staticfiles/
+*.log
+
+# Django migrations (opcional - descomentar se quiser ignorar)
+# /accounts/migrations/
+# /*/migrations/
+
+# ================================
+# VARIÁVEIS DE AMBIENTE
+# ================================
+.env
+.env.local
+.env.*.local
+.env.production.local
+.envrc
+
+# ================================
+# IDE / EDITORES
+# ================================
 .vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
 .idea/
+.idea/*
+*.iml
+*.iws
+*.ipr
+
+*.sublime-project
+*.sublime-workspace
+
+# vim
+.vim/
 *.swp
 *.swo
+*~
 
-# OS
+# nano
+.nano
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ================================
+# SISTEMA OPERACIONAL
+# ================================
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Icon?
 Thumbs.db
+*.cab
 
-# Django staticfiles
-staticfiles/
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+.windows
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# Linux
+.directory
+
+# ================================
+# NODE / NPM (se usar frontend)
+# ================================
+node_modules/
+npm-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# ================================
+# TEMPORÁRIOS / CACHE
+# ================================
+*.tmp
+*.bak
+*.backup
+*.swp
+~*
+*.~
+.cache/
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# ================================
+# ARQUIVOS DE SISTEMA
+# ================================
+*.pid
+*.seed
+*.seed.*
+*.lock
+.lock*
+
+# ================================
+# IDE ESPECÍFICAS
+# ================================
+# PyCharm
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pylint
+.pylintrc
+
+# ================================
+# OUTRAS FERRAMENTAS
+# ================================
+# Docker
+docker-compose.override.yml
+
+# pytest
+.pytest_cache/
+
+# coverage
+.coverage
+.coverage.*
+coverage/
+htmlcov/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Black
+.black
+
+# isort
+.isort.cfg
+
+# ================================
+# SEGURANÇA - NUNCA COMMITAR
+# ================================
+*.key
+*.pem
+*.p12
+*.p8
+/secrets/
+.credentials
+
+# ================================
+# ARQUIVOS LOCAIS IMPORTANTES
+# ================================
+!.env.example
+!.gitkeep

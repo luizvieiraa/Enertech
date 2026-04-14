@@ -934,6 +934,137 @@ section.content {
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 
+/* =========================================
+   PASSWORD INPUT WRAPPER & TOGGLE
+   ========================================= */
+.password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-input-wrapper .form-control {
+    padding-right: 44px;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    transition: all var(--transition);
+    padding: 0;
+}
+
+.password-toggle:hover {
+    color: var(--accent);
+    background: rgba(0, 230, 118, 0.1);
+}
+
+.password-toggle:active {
+    background: rgba(0, 230, 118, 0.15);
+}
+
+.password-toggle svg {
+    width: 18px;
+    height: 18px;
+}
+
+
+/* =========================================
+   PASSWORD STRENGTH VALIDATION
+   ========================================= */
+#password-strength-bar {
+    display: none;
+    margin-top: 12px;
+    margin-bottom: 16px;
+}
+
+.password-strength-bar-container {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 100px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.password-strength-bar-internal {
+    height: 100%;
+    width: 0%;
+    background-color: #ff3b30;
+    transition: width 0.3s ease, background-color 0.3s ease;
+    border-radius: 100px;
+    box-shadow: 0 0 12px currentColor;
+}
+
+#password-checklist {
+    display: none;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: rgba(0, 230, 118, 0.08);
+    border: 1px solid rgba(0, 230, 118, 0.15);
+    border-radius: var(--radius-md);
+}
+
+.password-requirements-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.password-requirements-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.password-requirement-item {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    padding: 4px 0;
+    transition: color 0.2s ease;
+}
+
+.password-requirement-item.nao-atendido {
+    color: var(--text-muted);
+}
+
+.password-requirement-item.atendido {
+    color: var(--accent-light);
+}
+
+.password-requirement-item::before {
+    content: "○";
+    display: inline-block;
+    width: 16px;
+    text-align: center;
+    margin-right: 6px;
+    font-weight: bold;
+    transition: all 0.2s ease;
+}
+
+.password-requirement-item.atendido::before {
+    content: "✓";
+    color: var(--accent-light);
+    font-weight: 800;
+}
+
 
 /* =========================================
    MAP

@@ -25,7 +25,17 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'fallback-dev-key')
 
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
+# Configurar ALLOWED_HOSTS para diferentes ambientes
+if os.getenv('RENDER_EXTERNAL_URL'):
+    # Em produção no Render
+    ALLOWED_HOSTS = [
+        os.getenv('RENDER_EXTERNAL_URL').replace('https://', ''),
+        os.getenv('RENDER_EXTERNAL_URL').replace('http://', ''),
+        '.onrender.com',
+    ]
+else:
+    # Em desenvolvimento local
+    ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 
 
 # ================================
@@ -168,6 +178,23 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 # ================================
 CSRF_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_HTTPONLY = False
+CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if os.getenv('CSRF_TRUSTED_ORIGINS') else []
+
+# Permitir requisições para APIs externas (Nominatim)
+if os.getenv('RENDER_EXTERNAL_URL'):
+    CSRF_TRUSTED_ORIGINS.append(os.getenv('RENDER_EXTERNAL_URL'))
+
+# Configurações para HTTPS em produção
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_SECURITY_POLICY = {
+        'default-src': ("'self'",),
+        'script-src': ("'self'", "'unsafe-inline'", 'cdn.jsdelivr.net'),
+        'style-src': ("'self'", "'unsafe-inline'", 'fonts.googleapis.com'),
+        'font-src': ("'self'", 'fonts.gstatic.com'),
+    }
 CSRF_COOKIE_AGE = 31449600
 
 CSRF_TRUSTED_ORIGINS = [

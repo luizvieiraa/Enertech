@@ -1,41 +1,114 @@
 {% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Criar Conta — Enertech{% endblock %}
 
 {% block content %}
 
-<div class="card">
+<div class="login-wrapper">
+    <div class="login-card">
 
-    <h2 class="title">Criar Conta ⚡</h2>
+        <div class="login-logo-wrap">
+            <img src="{% static 'img/logo.jpeg' %}"
+                 alt="Enertech Logo"
+                 class="login-logo-img">
+            <div class="login-logo-glow"></div>
+        </div>
 
-    <!-- MENSAGENS -->
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert {{ message.tags }}">
-                {{ message }}
+        <div class="login-brand">
+            <h1 class="login-brand-name">Enertech</h1>
+            <p class="login-brand-sub">Criar conta</p>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if 'success' in message.tags %}alert-success{% else %}alert-error{% endif %}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post" class="login-form">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label class="form-label">Usuário</label>
+                <input type="text" name="username" class="form-control"
+                       placeholder="seu.usuario" required autofocus>
             </div>
-        {% endfor %}
-    {% endif %}
 
-    <form method="post">
-        {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" name="email" class="form-control"
+                       placeholder="seu@email.com" required>
+            </div>
 
-        <input type="text" name="username" class="form-control" placeholder="Usuário" required>
+            <div class="form-group">
+                <label class="form-label">Senha</label>
+                <div class="password-input-wrapper">
+                    <input type="password" 
+                           id="password-input"
+                           name="password" 
+                           class="form-control"
+                           placeholder="••••••••" 
+                           required>
+                    <button type="button" class="password-toggle" data-target="password-input" title="Mostrar/ocultar senha">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Barra de força da senha -->
+                <div id="password-strength-bar">
+                    <div class="password-strength-bar-container">
+                        <div class="password-strength-bar-internal"></div>
+                    </div>
+                </div>
 
-        <input type="email" name="email" class="form-control" placeholder="Email" required>
+                <!-- Checklist de requisitos -->
+                <div id="password-checklist">
+                    <div class="password-requirements-title">Requisitos da senha:</div>
+                    <ul class="password-requirements-list">
+                        <li class="password-requirement-item nao-atendido">8+ caracteres</li>
+                        <li class="password-requirement-item nao-atendido">MAIÚSCULA</li>
+                        <li class="password-requirement-item nao-atendido">minúscula</li>
+                        <li class="password-requirement-item nao-atendido">número</li>
+                        <li class="password-requirement-item nao-atendido" style="grid-column: 1 / -1;">Caracteres especiais (!@#$%...)</li>
+                    </ul>
+                </div>
+            </div>
 
-        <input type="password" name="password" class="form-control" placeholder="Senha" required>
+            <div class="form-group">
+                <label class="form-label">Confirmar Senha</label>
+                <div class="password-input-wrapper">
+                    <input type="password" 
+                           id="confirm-password-input"
+                           name="confirm_password" 
+                           class="form-control"
+                           placeholder="••••••••" 
+                           required>
+                    <button type="button" class="password-toggle" data-target="confirm-password-input" title="Mostrar/ocultar senha">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+            </div>
 
-        <input type="password" name="confirm_password" class="form-control" placeholder="Confirmar senha" required>
+            <button type="submit" class="btn login-btn" disabled>Cadastrar</button>
+        </form>
 
-        <button type="submit" class="btn">Cadastrar</button>
-    </form>
+        <div class="login-footer-link">
+            <small>
+                Já tem conta?
+                <a href="{% url 'login' %}">Entrar</a>
+            </small>
+        </div>
 
-    <div class="link">
-        <small>
-            Já tem conta?
-            <a href="{% url 'login' %}">Entrar</a>
-        </small>
     </div>
-
 </div>
+
+<script src="{% static 'accounts/js/password-validation.js' %}"></script>
 
 {% endblock %}

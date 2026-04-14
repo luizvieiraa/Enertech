@@ -10,9 +10,45 @@ from django.views import View
 
 import json
 import requests
+import re
+import logging
 from datetime import datetime
 
 from .models import Avaliacao, Conector, Ponto, Agendamento
+
+# Configurar logger
+logger = logging.getLogger(__name__)
+
+
+def validar_forca_senha(password):
+    """
+    Valida a força da senha e retorna um dicionário com:
+    - forca: 'fraca', 'moderada' ou 'forte'
+    - score: número de requisitos atendidos
+    - requisitos: dict com status de cada requisito
+    """
+    requisitos = {
+        'comprimento': len(password) >= 8,
+        'maiuscula': bool(re.search(r'[A-Z]', password)),
+        'minuscula': bool(re.search(r'[a-z]', password)),
+        'numero': bool(re.search(r'[0-9]', password)),
+        'especial': bool(re.search(r'[!@#$%^&*(),.?":{}|<>]', password)),
+    }
+    
+    score = sum(requisitos.values())
+    
+    if score < 3:
+        forca = 'fraca'
+    elif score < 5:
+        forca = 'moderada'
+    else:
+        forca = 'forte'
+    
+    return {
+        'forca': forca,
+        'score': score,
+        'requisitos': requisitos
+    }
 
 
 class CustomLoginView(LoginView):
@@ -48,9 +84,13 @@ class RegisterView(View):
         if password != confirm_password:
             messages.error(request, 'As senhas não coincidem')
             return render(request, self.template_name)
-        if len(password) < 6:
-            messages.error(request, 'A senha deve ter pelo menos 6 caracteres')
+        
+        # Validar força da senha
+        validacao = validar_forca_senha(password)
+        if validacao['forca'] != 'forte':
+            messages.error(request, 'A senha é muito fraca. Use maiúsculas, minúsculas, números e caracteres especiais.')
             return render(request, self.template_name)
+        
         if User.objects.filter(username=username).exists():
             messages.error(request, 'Usuário já existe')
             return render(request, self.template_name)
@@ -61,6 +101,27 @@ class RegisterView(View):
         User.objects.create_user(username=username, email=email, password=password)
         messages.success(request, 'Conta criada com sucesso!')
         return redirect('login')
+
+
+def validar_senha_ajax(request):
+    """Endpoint AJAX para validar força da senha em tempo real"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            password = data.get('password', '')
+            
+            validacao = validar_forca_senha(password)
+            
+            return JsonResponse({
+                'forca': validacao['forca'],
+                'score': validacao['score'],
+                'requisitos': validacao['requisitos'],
+                'valida': validacao['forca'] == 'forte'
+            })
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    
+    return JsonResponse({'error': 'Método não permitido'}, status=405)
 
 
 @staff_member_required
@@ -108,9 +169,12 @@ def geocodificar_endereco(request):
         try:
             data = json.loads(request.body)
             endereco = data.get('endereco', '').strip()
+            user = request.user.username
             
             if not endereco:
                 return JsonResponse({'error': 'Endereço não fornecido'}, status=400)
+            
+            logger.info(f"[{user}] Iniciando geocodificação de: {endereco}")
             
             # Usar Nominatim (OpenStreetMap) para geocodificação
             url = 'https://nominatim.openstreetmap.org/search'
@@ -120,21 +184,66 @@ def geocodificar_endereco(request):
                 'limit': 1
             }
             headers = {
-                'User-Agent': 'Enertech/1.0'
+                'User-Agent': 'Enertech/1.0 (Django) Contact: admin@enertech.com'
             }
             
-            response = requests.get(url, params=params, headers=headers, timeout=5)
-            response.raise_for_status()
+            # Aumentar timeout para produção e adicionar retry
+            max_retries = 3
+            timeout = 10
+            response = None
+            
+            for attempt in range(max_retries):
+                try:
+                    logger.debug(f"[{user}] Tentativa {attempt + 1}/{max_retries} para geocodificar: {endereco}")
+                    
+                    response = requests.get(
+                        url, 
+                        params=params, 
+                        headers=headers, 
+                        timeout=timeout,
+                        allow_redirects=True
+                    )
+                    response.raise_for_status()
+                    logger.info(f"[{user}] Geocodificação bem-sucedida: {endereco}")
+                    break
+                except requests.exceptions.Timeout:
+                    logger.warning(f"[{user}] Timeout na transferência (tentativa {attempt + 1}/{max_retries})")
+                    if attempt < max_retries - 1:
+                        continue
+                    else:
+                        logger.error(f"[{user}] Timeout em todas as tentativas")
+                        return JsonResponse({
+                            'error': 'Serviço de mapas demorou muito. Tente novamente.'
+                        }, status=504)
+                except requests.exceptions.ConnectionError:
+                    logger.warning(f"[{user}] Erro de conexão (tentativa {attempt + 1}/{max_retries})")
+                    if attempt < max_retries - 1:
+                        continue
+                    else:
+                        logger.error(f"[{user}] Erro de conexão em todas as tentativas")
+                        return JsonResponse({
+                            'error': 'Erro de conexão com serviço de mapas. Verificar sua internet.'
+                        }, status=503)
+            
+            if response is None:
+                logger.error(f"[{user}] Response é None após todas as tentativas")
+                return JsonResponse({
+                    'error': 'Não foi possível conectar ao serviço de mapas'
+                }, status=503)
             
             results = response.json()
+            logger.info(f"[{user}] Resposta do Nominatim: {len(results)} resultado(s)")
             
             if not results:
-                return JsonResponse({'error': 'Endereço não encontrado'}, status=404)
+                logger.info(f"[{user}] Endereço não encontrado: {endereco}")
+                return JsonResponse({'error': 'Endereço não encontrado. Tente outro endereço.'}, status=404)
             
             first_result = results[0]
             lat = float(first_result.get('lat'))
             lng = float(first_result.get('lon'))
             display_name = first_result.get('display_name', endereco)
+            
+            logger.info(f"[{user}] Geocodificação completada: {display_name} ({lat}, {lng})")
             
             return JsonResponse({
                 'lat': lat,
@@ -144,11 +253,16 @@ def geocodificar_endereco(request):
             })
             
         except requests.exceptions.RequestException as e:
-            return JsonResponse({'error': f'Erro ao conectar com serviço de mapas: {str(e)}'}, status=500)
+            logger.error(f"[{request.user.username}] Erro de requisição: {str(e)}")
+            return JsonResponse({
+                'error': f'Erro ao conectar com serviço de mapas: {str(e)}'
+            }, status=500)
         except (ValueError, KeyError) as e:
+            logger.error(f"[{request.user.username}] Erro ao processar resposta: {str(e)}")
             return JsonResponse({'error': f'Erro ao processar resposta: {str(e)}'}, status=400)
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
+            logger.error(f"[{request.user.username}] Erro desconhecido: {str(e)}", exc_info=True)
+            return JsonResponse({'error': f'Erro desconhecido: {str(e)}'}, status=500)
     
     return JsonResponse({'error': 'Método não permitido'}, status=405)
 
