@@ -5,7 +5,7 @@ from .views import (
     atualizar_disponibilidade, geocodificar_endereco, criar_agendamento,
     meus_agendamentos, cancelar_agendamento, admin_agendamentos,
     atualizar_status_agendamento, aceitar_agendamento, negar_agendamento,
-    validar_senha_ajax
+    validar_senha_ajax, atualizar_onboarding, resetar_onboarding
 )
 from django.contrib.auth.views import LogoutView
 
@@ -37,4 +37,10 @@ urlpatterns = [
     path('agendamentos/<int:id>/negar/', negar_agendamento, name='negar_agendamento'),
     path('agendamentos/processar-automaticos/', views.processar_agendamentos_view, name='processar_agendamentos'),
     path('validar-senha/', validar_senha_ajax, name='validar_senha'),
+    
+    # ═════════════════════════════════════════════════════════════════════
+    # ONBOARDING
+    # ═════════════════════════════════════════════════════════════════════
+    path('atualizar-onboarding/', atualizar_onboarding, name='atualizar_onboarding'),
+    path('resetar-onboarding/', resetar_onboarding, name='resetar_onboarding'),
 ]

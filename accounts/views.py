@@ -63,10 +63,16 @@ class CustomLoginView(LoginView):
         return super().form_invalid(form)
 
 
-@login_required
 def home(request):
+    """Home pública - qualquer um pode acessar."""
     pontos = Ponto.objects.prefetch_related('avaliacoes', 'conectores').all()
-    return render(request, 'accounts/home.html', {'pontos': pontos})
+    onboarding_completed = request.session.get('onboarding_completed', False) if request.user.is_authenticated else False
+    
+    return render(request, 'accounts/home.html', {
+        'pontos': pontos,
+        'onboarding_completed': onboarding_completed,
+        'is_authenticated': request.user.is_authenticated,
+    })
 
 
 class RegisterView(View):
@@ -80,27 +86,39 @@ class RegisterView(View):
         email = request.POST.get('email')
         password = request.POST.get('password')
         confirm_password = request.POST.get('confirm_password')
+        
+        print(f'\n\n=== REGISTRO: Iniciando para {username} ===')
 
         if password != confirm_password:
+            print(f'Senhas não coincidem')
             messages.error(request, 'As senhas não coincidem')
             return render(request, self.template_name)
         
         # Validar força da senha
         validacao = validar_forca_senha(password)
         if validacao['forca'] != 'forte':
+            print(f'Senha fraca')
             messages.error(request, 'A senha é muito fraca. Use maiúsculas, minúsculas, números e caracteres especiais.')
             return render(request, self.template_name)
         
         if User.objects.filter(username=username).exists():
+            print(f'Usuário já existe')
             messages.error(request, 'Usuário já existe')
             return render(request, self.template_name)
         if User.objects.filter(email=email).exists():
+            print(f'Email já cadastrado')
             messages.error(request, 'Email já cadastrado')
             return render(request, self.template_name)
 
-        User.objects.create_user(username=username, email=email, password=password)
-        messages.success(request, 'Conta criada com sucesso!')
-        return redirect('login')
+        # Criar usuário
+        user = User.objects.create_user(username=username, email=email, password=password)
+        print(f'✅ USER CRIADO: {user}')
+        messages.success(request, 'Conta criada com sucesso! Bem-vindo à Enertech 🎉')
+        
+        # SEM fazer login - deixa o user navegar como público
+        # Se quiser usar funções protegidas, ele faz login depois
+        print(f'🚀 REDIRECIONANDO para /home/ (SEM LOGIN)')
+        return redirect('/home/')
 
 
 def validar_senha_ajax(request):
@@ -312,8 +330,11 @@ def status_pontos(request):
     return JsonResponse({'pontos': data})
 
 
-@login_required
 def avaliar_ponto(request, id):
+    """Endpoint PROTEGIDO - só usuários logados podem avaliar."""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Você precisa fazer login para avaliar', 'authenticated': False}, status=401)
+    
     if request.method == 'POST':
         try:
             ponto = get_object_or_404(Ponto, id=id)
@@ -342,11 +363,11 @@ def avaliar_ponto(request, id):
     return JsonResponse({'error': 'Método não permitido'}, status=405)
 
 
-@login_required
 def get_avaliacoes(request, id):
+    """Endpoint PÚBLICO - qualquer um pode ver avaliações."""
     ponto = get_object_or_404(Ponto, id=id)
     avals = ponto.avaliacoes.select_related('usuario').all()
-    minha = avals.filter(usuario=request.user).first()
+    minha = avals.filter(usuario=request.user).first() if request.user.is_authenticated else None
 
     return JsonResponse({
         'media': ponto.media_avaliacoes(),
@@ -395,9 +416,11 @@ def atualizar_disponibilidade(request, id):
 # AGENDAMENTO DE RECARGA
 # ═══════════════════════════════════════════════════════════════════════════
 
-@login_required
 def criar_agendamento(request):
-    """Cria um novo agendamento de recarga."""
+    """Endpoint PROTEGIDO - só usuários logados podem agendar."""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Você precisa fazer login para agendar', 'authenticated': False}, status=401)
+    
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -616,6 +639,63 @@ def negar_agendamento(request, id):
                 'novo_status': 'cancelado',
             })
         except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    
+    return JsonResponse({'error': 'Método não permitido'}, status=405)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ONBOARDING PARA NOVOS USUÁRIOS
+# ═══════════════════════════════════════════════════════════════════════════
+
+def atualizar_onboarding(request):
+    """
+    Atualiza o progresso do onboarding do usuário.
+    Salva o step atual na sessão do usuário.
+    """
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            step = int(data.get('step', 0))
+            
+            # Validar step
+            if not 0 <= step <= 5:
+                return JsonResponse({'error': 'Step inválido'}, status=400)
+            
+            # Armazenar na sessão
+            request.session['onboarding_step'] = step
+            request.session['onboarding_completed'] = (step == 5)
+            request.session.modified = True
+            
+            return JsonResponse({
+                'status': 'sucesso',
+                'step': step,
+                'completado': step == 5
+            })
+        except Exception as e:
+            logger.error(f'Erro ao atualizar onboarding: {str(e)}')
+            return JsonResponse({'error': str(e)}, status=400)
+    
+    return JsonResponse({'error': 'Método não permitido'}, status=405)
+
+
+def resetar_onboarding(request):
+    """
+    Reseta o onboarding do usuário para exibir novamente.
+    """
+    if request.method == 'POST':
+        try:
+            # Limpar dados de onboarding da sessão
+            request.session['onboarding_step'] = 1
+            request.session['onboarding_completed'] = False
+            request.session.modified = True
+            
+            return JsonResponse({
+                'status': 'sucesso',
+                'mensagem': 'Onboarding resetado'
+            })
+        except Exception as e:
+            logger.error(f'Erro ao resetar onboarding: {str(e)}')
             return JsonResponse({'error': str(e)}, status=400)
     
     return JsonResponse({'error': 'Método não permitido'}, status=405)

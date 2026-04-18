@@ -3,7 +3,7 @@ from django.urls import path, include
 from django.shortcuts import redirect
 
 def home_redirect(request):
-    return redirect('login')
+    return redirect('home')  # Redirecionar para home, não login
 
 urlpatterns = [
     path('admin/', admin.site.urls),

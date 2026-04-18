@@ -10,19 +10,19 @@
     <meta name="theme-color" content="#04080f">
     <title>{% block title %}Enertech{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/override.css' %}">
     {% block extra_css %}{% endblock %}
     {% block maplibre_css %}
     <link href='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css' rel='stylesheet' />
     {% endblock %}
 </head>
 
-<body class="{% if user.is_authenticated %}logged{% endif %}">>
+<body class="{% if user.is_authenticated %}logged{% endif %}">
 
 <div id="toastContainer" class="toast-container"></div>
 
 <div class="container">
 
-    {% if user.is_authenticated %}
     <aside class="sidebar" id="sidebar">
 
         <div class="sb-logo">
@@ -30,18 +30,13 @@
                  alt="Enertech"
                  class="sb-logo-img">
             <span class="sb-logo-text">Enertech</span>
-            <button class="sb-close-btn" onclick="toggleSidebar()" aria-label="Fechar menu">✕</button>
         </div>
+        <button class="sb-close-btn" onclick="toggleSidebar()" aria-label="Fechar menu">✕</button>
 
-        <div class="sb-section sb-filters-section filters-collapsed" id="sbFiltersContent">
+        <div class="sb-section sb-filters-section" id="sbFiltersContent">
             <div class="sb-section-label">
                 Filtros
                 <button class="sb-clear-btn" onclick="resetarFiltros()">limpar</button>
-            </div>
-            <div class="sb-filter-block">
-                <input type="text" id="inputBusca" class="sb-input"
-                       onkeyup="aplicarFiltros()"
-                       placeholder="Buscar por nome...">
             </div>
             <div class="sb-filter-block">
                 <div class="sb-filter-label">
@@ -94,13 +89,6 @@
             </div>
         </div>
 
-        <div class="sb-section" style="border-bottom: none; padding-bottom: 10px;">
-            <button class="sb-filter-toggle-btn" onclick="toggleFilterPanel()">
-                <span style="font-size: 14px; margin-right: 6px;">🔍</span>
-                <span id="filterBtnText">Abrir Filtros</span>
-            </button>
-        </div>
-
         <nav class="sb-nav">
             <a href="{% url 'home' %}" class="sb-nav-link sb-nav-link--active">
                 <span class="sb-nav-icon">🗺️</span>
@@ -119,6 +107,7 @@
         </nav>
 
         <div class="sb-footer">
+            {% if user.is_authenticated %}
             <div class="sb-user">
                 <div class="sb-avatar">{{ user.username|slice:":2"|upper }}</div>
                 <div class="sb-user-info">
@@ -126,15 +115,76 @@
                     <div class="sb-user-role">{% if user.is_staff %}Administrador{% else %}Usuário{% endif %}</div>
                 </div>
             </div>
+            <button class="sb-btn-retomar" onclick="confirmarRetomar()" title="Retomar tour de boas-vindas">
+                <span>🎓</span> Ver tour novamente
+            </button>
             <form action="{% url 'logout' %}" method="post" style="margin:0;">
                 {% csrf_token %}
                 <button class="btn-logout" type="submit">Sair</button>
             </form>
+            {% else %}
+            <a href="{% url 'login' %}" class="btn btn-primary" style="width: 100%; text-align: center; padding: 10px; margin-bottom: 8px;">
+                Fazer Login
+            </a>
+            <a href="{% url 'register' %}" class="btn btn-secondary" style="width: 100%; text-align: center; padding: 10px;">
+                Criar Conta
+            </a>
+            {% endif %}
         </div>
 
     </aside>
 
+    <header class="topbar">
+        <div class="topbar-left">
+            <a href="{% url 'home' %}" class="topbar-brand">
+                <img src="{% static 'img/logo.jpeg' %}" alt="Enertech" class="topbar-logo">
+                <span class="topbar-title">Enertech</span>
+            </a>
+            <h1>{% block topbar_title %}Olá, {{ user.username }} 👋{% endblock %}</h1>
+        </div>
+        <div class="topbar-right">
+            <button class="mobile-hamburger" id="mobileHamburger" onclick="toggleMobileSidebar()" aria-label="Menu">
+                <span></span><span></span><span></span>
+            </button>
+            {% if not user.is_authenticated %}
+            <a href="{% url 'login' %}" class="btn btn-primary desktop-auth-btn" style="padding: 8px 16px; font-size: 14px;">Entrar</a>
+            <a href="{% url 'register' %}" class="btn btn-secondary desktop-auth-btn" style="padding: 8px 16px; font-size: 14px;">Criar conta</a>
+            {% else %}
+            {% block topbar_actions %}{% endblock %}
+            {% endif %}
+        </div>
+    </header>
+
+    <main class="main">
+        <section class="content">
+            {% block content %}{% endblock %}
+        </section>
+    </main>
+
     <div class="sb-overlay" id="sbOverlay" onclick="toggleSidebar()"></div>
+
+    <!-- SIDEBAR MOBILE -->
+    <div id="mobileSidebar" class="mobile-sidebar">
+        <div class="mobile-sidebar-header">
+            <h2>Menu</h2>
+            <button class="mobile-sidebar-close" onclick="toggleMobileSidebar()">✕</button>
+        </div>
+        <div class="mobile-sidebar-content">
+            {% if not user.is_authenticated %}
+            <div class="mobile-sidebar-auth">
+                <a href="{% url 'login' %}" class="btn btn-primary mobile-sidebar-btn" onclick="toggleMobileSidebar()">
+                    🔐 Entrar
+                </a>
+                <a href="{% url 'register' %}" class="btn btn-secondary mobile-sidebar-btn" onclick="toggleMobileSidebar()">
+                    ➕ Criar Conta
+                </a>
+            </div>
+            {% endif %}
+            <!-- Conteúdo será adicionado aqui com mais funções -->
+        </div>
+    </div>
+    
+    <div id="mobileSidebarOverlay" class="mobile-sidebar-overlay" onclick="toggleMobileSidebar()"></div>
     
     <div id="sidebarDetalhes" class="sidebar-details">
         <div class="sidebar-details-header">
@@ -147,30 +197,10 @@
     </div>
     
     <div id="sbOverlayDetalhes" class="sb-overlay-details" onclick="fecharSidebarDetalhes()"></div>
-    {% endif %}
-
-    <main class="main">
-        <header class="topbar">
-            <div class="topbar-left">
-                {% if user.is_authenticated %}
-                <button class="sb-hamburger" onclick="toggleSidebar()" aria-label="Menu">
-                    <span></span><span></span><span></span>
-                </button>
-                {% endif %}
-                <h1>{% block topbar_title %}Olá, {{ user.username }} 👋{% endblock %}</h1>
-            </div>
-            <div class="topbar-right">
-                {% block topbar_actions %}{% endblock %}
-            </div>
-        </header>
-
-        <section class="content">
-            {% block content %}{% endblock %}
-        </section>
-    </main>
 </div>
 
 <script src='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js'></script>
+<script src="{% static 'js/sidebar-scroll-fix.js' %}"></script>
 {% block scripts %}{% endblock %}
 
 <script>
@@ -179,7 +209,7 @@ function toggleSidebar() {
     const ov = document.getElementById('sbOverlay');
     if (!sb) return;
     const open = sb.classList.toggle('sb--open');
-    if (ov) ov.classList.toggle('sb-overlay--show', open);
+    if (ov) ov.classList.toggle('sb--open', open);
     document.body.classList.toggle('sb-no-scroll', open);
 }
 
@@ -196,7 +226,98 @@ window.showToast = function(msg, type = 'info', duration = 3000) {
         toast.addEventListener('transitionend', () => toast.remove(), { once: true });
     }, duration);
 };
+
+/* ════════════════════════════════════════════════════════════ */
+/* MOBILE SIDEBAR MENU */
+/* ════════════════════════════════════════════════════════════ */
+
+window.toggleMobileSidebar = function() {
+    const sidebar = document.getElementById('mobileSidebar');
+    const overlay = document.getElementById('mobileSidebarOverlay');
+    const hamburger = document.getElementById('mobileHamburger');
+    
+    if (!sidebar || !overlay || !hamburger) return;
+    
+    const isOpen = sidebar.classList.toggle('open');
+    overlay.classList.toggle('open', isOpen);
+    hamburger.classList.toggle('active', isOpen);
+    document.body.classList.toggle('mobile-sidebar-open', isOpen);
+};
 </script>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- ONBOARDING MODAL -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div id="onboardingModal" style="display: none;" class="onboarding-modal" data-completed="{{ onboarding_completed|lower }}">
+    <div class="onboarding-modal-card">
+        <!-- Barra de Progresso -->
+        <div class="onboarding-progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <!-- Steps -->
+        <div class="onboarding-steps">
+            <!-- Step 1: Bem-vindo -->
+            <div id="onboarding-step-1" class="onboarding-step active">
+                <div class="onboarding-step-icon">👋</div>
+                <h2 class="onboarding-step-title">Bem-vindo à Enertech!</h2>
+                <p class="onboarding-step-desc">Vamos te mostrar como usar o mapa de eletropostos e encontrar a melhor recarga perto de você.</p>
+            </div>
+
+            <!-- Step 2: Mapa -->
+            <div id="onboarding-step-2" class="onboarding-step">
+                <div class="onboarding-step-icon">🗺️</div>
+                <h2 class="onboarding-step-title">Explore o Mapa</h2>
+                <p class="onboarding-step-desc">Todos os eletropostos disponíveis estão no mapa. Clique em um para ver detalhes como preço, potência e conetores.</p>
+            </div>
+
+            <!-- Step 3: Filtros -->
+            <div id="onboarding-step-3" class="onboarding-step">
+                <div class="onboarding-step-icon">🔍</div>
+                <h2 class="onboarding-step-title">Use os Filtros</h2>
+                <p class="onboarding-step-desc">Ajuste preço máximo, potência mínima, distância e tipo de conector para encontrar exatamente o que você precisa.</p>
+            </div>
+
+            <!-- Step 4: Detalhes -->
+            <div id="onboarding-step-4" class="onboarding-step">
+                <div class="onboarding-step-icon">⚡</div>
+                <h2 class="onboarding-step-title">Veja os Detalhes</h2>
+                <p class="onboarding-step-desc">Clique em uma carga para ver informações completas: horário, conetores disponíveis, avaliações e agendar sua recarga.</p>
+            </div>
+
+            <!-- Step 5: Pronto -->
+            <div id="onboarding-step-5" class="onboarding-step">
+                <div class="onboarding-step-icon">🚀</div>
+                <h2 class="onboarding-step-title">Tudo Pronto!</h2>
+                <p class="onboarding-step-desc">Agora você está pronto para explorar. Clique em "Começar" para fechar este tour e começar a usar o mapa.</p>
+            </div>
+        </div>
+
+        <!-- Botões -->
+        <div class="onboarding-actions">
+            <button id="btnPrev" class="onboarding-btn onboarding-btn--secondary" onclick="prevOnboardingStep()" style="display: none;">← Anterior</button>
+            <button id="btnNext" class="onboarding-btn onboarding-btn--primary" onclick="nextOnboardingStep()">Próximo →</button>
+            <button id="btnSkip" class="onboarding-btn onboarding-btn--tertiary" onclick="skipOnboarding()">Pular</button>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Modal (para retomar onboarding) -->
+<div id="settingsModal" style="display: none;" class="settings-modal">
+    <div class="settings-modal-card">
+        <h2>Configurações</h2>
+        <div class="settings-content">
+            <p>Retomar tour de boas-vindas?</p>
+            <button class="btn btn-primary" onclick="confirmarRetomar()">Retomar Onboarding</button>
+            <button class="btn btn-secondary" onclick="fecharConfiguracoes()">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Onboarding Script -->
+<script src="{% static 'accounts/js/onboarding.js' %}"></script>
+</body>
+</html>
 
 </body>
 </html>

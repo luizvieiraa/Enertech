@@ -9,6 +9,17 @@ const TOTAL_STEPS = 5;
 /**
  * Inicializa o onboarding quando DOM está pronto
  */
+// Fallback para window.apiUrls se não estiver definido
+if (typeof window.apiUrls === 'undefined') {
+    window.apiUrls = {
+        atualizar_onboarding: "/atualizar-onboarding/",
+        resetar_onboarding: "/resetar-onboarding/",
+    };
+    console.warn('⚠️ window.apiUrls não foi definido no template. Usando URLs padrão.');
+} else {
+    console.log('✅ window.apiUrls disponível:', window.apiUrls);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initOnboarding();
 });
@@ -20,9 +31,26 @@ function initOnboarding() {
     const modal = document.getElementById('onboardingModal');
     if (!modal) return;
 
-    // Mostrar o primeiro step
-    showOnboardingStep(1);
-    updateOnboardingUI();
+    // Verificar se o onboarding já foi completado (from HTML data-attribute ou localStorage)
+    const completed = modal.getAttribute('data-completed') === 'true' || 
+                     localStorage.getItem('onboarding_completed') === 'true';
+    
+    console.log('🔍 Verificando onboarding:', { completed, dataAttr: modal.getAttribute('data-completed'), localStorage: localStorage.getItem('onboarding_completed') });
+    
+    // Só mostrar se não foi completado ainda
+    if (!completed) {
+        // Mostrar o modal
+        modal.style.display = 'flex';
+
+        // Mostrar o primeiro step
+        showOnboardingStep(1);
+        updateOnboardingUI();
+    } else {
+        console.log('✅ Onboarding já foi completado, ocultando modal');
+        modal.style.display = 'none';
+        modal.setAttribute('data-completed', 'true');
+        localStorage.setItem('onboarding_completed', 'true');
+    }
 }
 
 /**
@@ -125,7 +153,7 @@ function updateOnboardingUI() {
  * Salva progresso no backend
  */
 function saveOnboardingProgress() {
-    fetch('/atualizar-onboarding/', {
+    fetch(window.apiUrls.atualizar_onboarding, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -146,24 +174,47 @@ function saveOnboardingProgress() {
  * Completa o onboarding
  */
 function completeOnboarding() {
-    fetch('/atualizar-onboarding/', {
+    const csrfToken = getCookie('csrftoken');
+    console.log('🚀 Iniciando completeOnboarding. CSRF Token:', csrfToken ? 'OK' : 'MISSING');
+    
+    fetch(window.apiUrls.atualizar_onboarding, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken'),
+            'X-CSRFToken': csrfToken,
         },
         body: JSON.stringify({
             step: TOTAL_STEPS,
         }),
     })
-    .then(res => res.json())
+    .then(res => {
+        console.log('📡 Status da resposta:', res.status);
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        return res.json();
+    })
     .then(data => {
-        if (data.completado) {
+        console.log('✅ Resposta do servidor:', data);
+        if (data.completado || data.status === 'sucesso') {
+            console.log('🎉 Onboarding completado!');
+            // Atualizar data-attribute do modal
+            const modal = document.getElementById('onboardingModal');
+            if (modal) {
+                modal.setAttribute('data-completed', 'true');
+            }
+            // Salvar no localStorage também (backup)
+            localStorage.setItem('onboarding_completed', 'true');
             // Mostrar animação de conclusão
             showOnboardingCompletion();
+        } else {
+            console.error('❌ Resposta não indicou sucesso:', data);
         }
     })
-    .catch(err => console.error('Erro:', err));
+    .catch(err => {
+        console.error('❌ Erro ao completar onboarding:', err);
+        showToast('Erro ao completar onboarding. Tente novamente.');
+    });
 }
 
 /**
@@ -179,6 +230,11 @@ function showOnboardingCompletion() {
     setTimeout(() => {
         modal.style.display = 'none';
         showCompletionToast();
+        
+        // Redirecionar para /home/ após 2 segundos (tempo suficiente para salvar sessão)
+        setTimeout(() => {
+            window.location.href = '/home/';
+        }, 2000);
     }, 500);
 }
 
@@ -246,8 +302,8 @@ function fecharConfiguracoes() {
  * Confirma retomar onboarding
  */
 function confirmarRetomar() {
-    if (confirm('Deseja retomar o tour de boas-vindas? Ele será exibido na próxima vez que você recarregar a página.')) {
-        fetch('/resetar-onboarding/', {
+    if (confirm('Deseja retomar o tour de boas-vindas?')) {
+        fetch(window.apiUrls.resetar_onboarding, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -257,8 +313,28 @@ function confirmarRetomar() {
         .then(res => res.json())
         .then(data => {
             if (data.status === 'sucesso') {
-                fecharConfiguracoes();
-                showToast('✓ Onboarding resetado! Recarregue a página para continuar.', 'success');
+                // Atualizar o data-attribute do modal
+                const modal = document.getElementById('onboardingModal');
+                modal.setAttribute('data-completed', 'false');
+                
+                // Limpar localStorage (reiniciar tour)
+                localStorage.removeItem('onboarding_completed');
+                
+                // Reset variáveis
+                currentOnboardingStep = 1;
+                
+                // Fechar sidebar se estiver aberta
+                const sb = document.getElementById('sidebar');
+                if (sb && sb.classList.contains('sb--open')) {
+                    toggleSidebar();
+                }
+                
+                // Mostrar o modal
+                modal.style.display = 'flex';
+                showOnboardingStep(1);
+                updateOnboardingUI();
+                
+                showToast('✓ Tour reiniciado! Aproveite!', 'success');
             }
         })
         .catch(err => console.error('Erro:', err));

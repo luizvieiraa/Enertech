@@ -16,6 +16,30 @@ let conectorFormCount = 0;
 // Variáveis para agendamento
 let pontoAgendamentoAtual = null;
 
+/**
+ * Helper: Verifica se usuário está autenticado, senão mostra modal de login
+ */
+function verificarAutenticacao(acao = 'continuar') {
+    if (!window.userIsAuthenticated) {
+        showToast(`📋 Faça login para ${acao}`, 'info');
+        setTimeout(() => {
+            window.location.href = '/login/';
+        }, 1500);
+        return false;
+    }
+    return true;
+}
+
+/**
+ * Helper: Trata respostas 401 do servidor
+ */
+function tratarErro401(data) {
+    showToast(`🔐 ${data.error || 'Você precisa fazer login'}`, 'info');
+    setTimeout(() => {
+        window.location.href = '/login/';
+    }, 1500);
+}
+
 const TIPOS_LABEL = {
     tipo1: 'Tipo 1 (J1772)',
     tipo2: 'Tipo 2 (Mennekes)',
@@ -839,6 +863,8 @@ window.fecharAvaliacao = function () {
 };
 
 window.enviarAvaliacao = function () {
+    if (!verificarAutenticacao('avaliar')) return;
+    
     if (!estrelasEscolhidas) {
         showToast('Selecione pelo menos 1 estrela!', 'danger');
         return;
@@ -850,7 +876,10 @@ window.enviarAvaliacao = function () {
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
         body: JSON.stringify({ estrelas: estrelasEscolhidas, comentario }),
     })
-        .then((r) => r.json())
+        .then((r) => {
+            if (r.status === 401) return r.json().then(data => { tratarErro401(data); throw new Error('Unauthorized'); });
+            return r.json();
+        })
         .then((data) => {
             if (data.error) {
                 showToast(`Erro: ${data.error}`, 'danger');
@@ -869,7 +898,7 @@ window.enviarAvaliacao = function () {
                 markers[pontoAvaliacaoAtual].getElement().innerHTML = buildIconHtml(ponto);
             }
             atualizarProximos();
-            showToast('Avaliação enviada!', 'success');
+            showToast('✅ Avaliação enviada!', 'success');
         })
         .catch(() => showToast('Erro ao enviar avaliação.', 'danger'));
 };
@@ -1306,6 +1335,7 @@ window.validarHorarioAgendamento = function() {
 };
 
 window.confirmarAgendamento = function() {
+    if (!verificarAutenticacao('agendar')) return;
     if (!pontoAgendamentoAtual) return;
 
     const ponto = dadosPontos.find((p) => p.id === pontoAgendamentoAtual);
@@ -1349,7 +1379,10 @@ window.confirmarAgendamento = function() {
             energia_solicitada: energia
         })
     })
-    .then(r => r.json())
+    .then(r => {
+        if (r.status === 401) return r.json().then(data => { tratarErro401(data); throw new Error('Unauthorized'); });
+        return r.json();
+    })
     .then(data => {
         if (data.status === 'sucesso') {
             showToast(`✅ Agendamento criado! Aguardando confirmação do administrador.`, 'success');
@@ -1365,10 +1398,15 @@ window.confirmarAgendamento = function() {
 };
 
 window.abrirMeusAgendamentos = function() {
+    if (!verificarAutenticacao('ver agendamentos')) return;
+    
     showToast('Carregando seus agendamentos...', 'info');
 
     fetch('/agendamentos/meus/')
-        .then(r => r.json())
+        .then(r => {
+            if (r.status === 401) return r.json().then(data => { tratarErro401(data); throw new Error('Unauthorized'); });
+            return r.json();
+        })
         .then(data => {
             const agendamentos = data.agendamentos;
             if (agendamentos.length === 0) {

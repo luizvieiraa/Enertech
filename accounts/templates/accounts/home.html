@@ -13,8 +13,19 @@
 {% block content %}
 
 <div class="main-content-wrapper">
-    <div class="map-container">
+    <div class="map-container" style="position: relative;">
         <div id="map"></div>
+        
+        <!-- Barra de pesquisa e botão de filtros - canto superior esquerdo minimalista -->
+        <div class="map-overlay-top">
+            <input type="text" id="inputBusca" 
+                   onkeyup="aplicarFiltros()"
+                   placeholder="🔍 Buscar..."
+                   class="map-search-input">
+            <button class="map-filter-btn" onclick="toggleSidebar()" title="Abrir filtros">
+                🔍 Filtros
+            </button>
+        </div>
         
         <!-- Caixa de eletropostos próximos -->
         <div id="proximosBox" class="proximos-box" style="display: none;">
@@ -208,6 +219,15 @@
 <script src="{% static 'accounts/js/dashboard.js' %}"></script>
 
 <script>
+    // Flag global de autenticação
+    window.userIsAuthenticated = {{ is_authenticated|lower }};
+    
+    // URLs do Django para o JavaScript
+    window.apiUrls = {
+        atualizar_onboarding: "{% url 'atualizar_onboarding' %}",
+        resetar_onboarding: "{% url 'resetar_onboarding' %}",
+    };
+    
     document.addEventListener("DOMContentLoaded", function () {
         const pontosDoBanco = [
             {% for p in pontos %}
