@@ -59,7 +59,7 @@ Histórias selecionadas:
 - Issue tracker atualizado com bugs e melhorias
 
 ## 🚀 Deploy
-- [Link para o sistema em produção](URL_DO_DEPLOY)
+- [Link para o sistema em produção](https://enertech-sq4i.onrender.com)
 
 ## 🎥 Screencast
 [Link para o screencast](https://youtu.be/jMHKG2hMUsI?si=onBhtmm84sfaa9-f)
@@ -149,7 +149,7 @@ Implementar novas funcionalidades relacionadas à experiência do usuário e loc
 ---
 
 ## 🚀 Link do Deploy
-[Link para o screencast](https://enertech-sq4i.onrender.com)
+[Link para o deploy](https://enertech-sq4i.onrender.com)
 
 ---
 
