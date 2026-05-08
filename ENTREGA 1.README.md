@@ -149,7 +149,7 @@ Implementar novas funcionalidades relacionadas à experiência do usuário e loc
 ---
 
 ## 🚀 Link do Deploy
-- https://enertech-b562.onrender.com
+[Link para o screencast](https://enertech-sq4i.onrender.com)
 
 ---
 
