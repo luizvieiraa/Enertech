@@ -104,6 +104,8 @@ Resolução: Substituição de links <a> por pequenos formulários <form method=
 
 Severidade: Média (Segurança e Conformidade).
 
+-------------------------------------------------------------------------------------------------------------------
+
 ## Entrega 03 - (27/04):
 
 ## Objetivo da Sprint 3
