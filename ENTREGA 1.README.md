@@ -76,7 +76,8 @@ Causa Raiz: O template (provavelmente o base.html) continha uma tag {% url 'logo
 Resolução: Adição da rota path('logout/', auth_views.LogoutView.as_view(), name='logout') e configuração do LOGOUT_REDIRECT_URL no settings.py.
 
 Severidade: Alta (Bloqueava o carregamento da página).
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 2. Falha de Submissão Silenciosa (Formulário Inerte)
 Descrição: O usuário preenchia os dados de login, clicava em "Entrar", mas a página apenas recarregava sem processar a autenticação (nenhum POST registrado no log do servidor).
 
@@ -85,7 +86,8 @@ Causa Raiz: Conflito de estrutura no HTML. Tags de formulário no base.html (com
 Resolução: Reestruturação do base.html utilizando condicionais {% if user.is_authenticated %} para isolar componentes da Dashboard (Sidebar/Topbar) do conteúdo de autenticação.
 
 Severidade: Crítica (Impedia o acesso ao sistema).
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 3. Duplicidade de Blocos de Template (TemplateSyntaxError)
 Descrição: Erro de sintaxe: block tag with name 'content' appears more than once.
 
@@ -94,6 +96,7 @@ Causa Raiz: Tentativa de declarar o mesmo {% block content %} duas vezes dentro 
 Resolução: Unificação do bloco content. A lógica de "Logado vs Deslogado" passou a ser controlada por if/else ao redor dos elementos de UI (Sidebar), mantendo apenas uma declaração de bloco de conteúdo.
 
 Severidade: Alta (Impedia o servidor de renderizar qualquer página).
+
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 4. Mudança de Protocolo de Logout (Django 5.0+)
 Descrição: Erros potenciais ao tentar deslogar via link simples (GET).
@@ -180,7 +183,8 @@ Implementar novas funcionalidades relacionadas à experiência do usuário e loc
 [Link para o screencast do e2e](https://youtu.be/dGR5i2hcrdk?si=4ygCGreKUCRIj_9J)
 
 
-
+## Relatório em par:
+Optamos por nao realizar os relatórios, pois foram considerados uma melhoria futura, prevista para uma etapa posterior após estabilização das funcionalidades centrais do sistema.
 
  
 
