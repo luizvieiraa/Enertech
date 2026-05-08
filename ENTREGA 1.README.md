@@ -103,6 +103,56 @@ Resolução: Substituição de links <a> por pequenos formulários <form method=
 
 Severidade: Média (Segurança e Conformidade).
 
+## Entrega 03 - (27/04):
+
+## Objetivo da Sprint 3
+
+Implementar novas funcionalidades relacionadas à experiência do usuário e localização de eletropostos, garantindo:
+
+* Versionamento ativo com commits semanais
+* Uso contínuo do issue tracker no GitHub
+* Atualização do deploy em produção
+* README atualizado com as novas funcionalidades
+* Screencast demonstrativo da Sprint 3
+
+---
+
+## 📌 Quadro da Sprint 3
+
+**Sprint:** quadro Sprint 3 — 25 abr – 2 mai (2 tickets)
+
+[Print do Quadro da Sprint 3](https://github.com/user-attachments/assets/715e3dfb-599a-4e07-964c-56be8d84473b)
+
+### Histórias selecionadas:
+
+* **SCRUM-9:** Agendamento de recarga
+* **SCRUM-10:** Distância até eletroposto
+
+---
+
+## 📋 Backlog
+[Print do Backlog](https://github.com/user-attachments/assets/4e17010a-29b5-4c3c-aa28-2627a5f63c81)
+
+- SCRUM-9: Agendamento de recarga
+- SCRUM-10: Distância até eletroposto
+
+---
+
+## 🔗 Repositório e Versionamento
+- [Link para o repositório GitHub](URl)
+- Commits semanais documentando progresso
+- Issue tracker atualizado com bugs e melhorias
+
+---
+
+## 🚀 Link do Deploy
+- https://enertech-b562.onrender.com
+
+---
+
+## 🎥 Screencast
+[Link para o screencast](https://youtu.be/F9EFx8x7fEQ?si=dq450Kz7wLFkS81B)
+
 
 
  
