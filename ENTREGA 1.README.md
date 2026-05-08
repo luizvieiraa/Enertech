@@ -54,7 +54,7 @@ Histórias selecionadas:
 - SCRUM-8: Ranking de eletropostos
  
 ## 🔗 Repositório e Versionamento
-- [Link para o repositório GitHub](URl)
+- [Link para o repositório GitHub](https://github.com/luizvieiraa/Enertech/tree/main)
 - Commits semanais documentando progresso
 - Issue tracker atualizado com bugs e melhorias
 
@@ -142,7 +142,7 @@ Implementar novas funcionalidades relacionadas à experiência do usuário e loc
 ---
 
 ## 🔗 Repositório e Versionamento
-- [Link para o repositório GitHub](URl)
+- [Link para o repositório GitHub](https://github.com/luizvieiraa/Enertech/tree/main)
 - Commits semanais documentando progresso
 - Issue tracker atualizado com bugs e melhorias
 
