@@ -155,6 +155,8 @@ Implementar novas funcionalidades relacionadas à experiência do usuário e loc
 
 ## 🎥 Screencast
 [Link para o screencast](https://youtu.be/F9EFx8x7fEQ?si=dq450Kz7wLFkS81B)
+[Link para o screencast do e2e](https://youtu.be/dGR5i2hcrdk?si=4ygCGreKUCRIj_9J)
+
 
 
 
