@@ -25,6 +25,8 @@ ENV/
 env.bak/
 venv.bak/
 .venv
+.env.example
+.env.render.example
 
 # ================================
 # DJANGO

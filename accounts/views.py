@@ -87,37 +87,37 @@ class RegisterView(View):
         password = request.POST.get('password')
         confirm_password = request.POST.get('confirm_password')
         
-        print(f'\n\n=== REGISTRO: Iniciando para {username} ===')
+        logger.debug("REGISTRO: iniciando para %s", username)
 
         if password != confirm_password:
-            print(f'Senhas não coincidem')
+            logger.debug("REGISTRO: senhas nao coincidem para %s", username)
             messages.error(request, 'As senhas não coincidem')
             return render(request, self.template_name)
         
         # Validar força da senha
         validacao = validar_forca_senha(password)
         if validacao['forca'] != 'forte':
-            print(f'Senha fraca')
+            logger.debug("REGISTRO: senha fraca para %s", username)
             messages.error(request, 'A senha é muito fraca. Use maiúsculas, minúsculas, números e caracteres especiais.')
             return render(request, self.template_name)
         
         if User.objects.filter(username=username).exists():
-            print(f'Usuário já existe')
+            logger.debug("REGISTRO: usuario ja existe: %s", username)
             messages.error(request, 'Usuário já existe')
             return render(request, self.template_name)
         if User.objects.filter(email=email).exists():
-            print(f'Email já cadastrado')
+            logger.debug("REGISTRO: email ja cadastrado: %s", email)
             messages.error(request, 'Email já cadastrado')
             return render(request, self.template_name)
 
         # Criar usuário
         user = User.objects.create_user(username=username, email=email, password=password)
-        print(f'✅ USER CRIADO: {user}')
+        logger.debug("REGISTRO: usuario criado: %s", user)
         messages.success(request, 'Conta criada com sucesso! Bem-vindo à Enertech 🎉')
         
         # SEM fazer login - deixa o user navegar como público
         # Se quiser usar funções protegidas, ele faz login depois
-        print(f'🚀 REDIRECIONANDO para /home/ (SEM LOGIN)')
+        logger.debug("REGISTRO: redirecionando para /home/ sem login")
         return redirect('/home/')
 
 

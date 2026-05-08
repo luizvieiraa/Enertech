@@ -102,6 +102,16 @@ http://127.0.0.1:8000/
 
 ---
 
+## Testes E2E
+
+Os fluxos ponta a ponta ficam em `accounts/tests_e2e.py` e usam o banco de teste do Django.
+
+```bash
+python manage.py test accounts
+```
+
+---
+
 ## 🔐 Funcionalidades (atuais ou planejadas)
 
 * Sistema de autenticação de usuários
