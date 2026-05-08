@@ -25,7 +25,8 @@
 
 -------------------------------------------------------------------------------------------------------------------
 
-##Entrega 02 - (30/03):
+## Entrega 02 - (30/03):
+
 ## 🎯 Objetivo da Sprint 2
 Implementar pelo menos 3 histórias selecionadas do backlog, garantindo:
 - Versionamento ativo com commits semanais
