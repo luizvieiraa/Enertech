@@ -105,7 +105,28 @@ Resolução: Substituição de links <a> por pequenos formulários <form method=
 Severidade: Média (Segurança e Conformidade).
 
 -------------------------------------------------------------------------------------------------------------------
+5.Implementação de Agendamento de Recarga
 
+Descrição:Foi implementada a funcionalidade de agendamento de recarga, permitindo ao usuário selecionar um eletroposto, escolher data e horário para realizar a recarga.
+
+Causa Raiz: Ausência de validação para verificar conflitos de horário no backend.
+
+Resolução: Implementação de validação no formulário/model para impedir agendamentos duplicados no mesmo intervalo de tempo.
+
+Severidade: Alta (Comprometia a lógica de funcionamento do sistema).
+
+-------------------------------------------------------------------------------------------------------------------
+6.Implementação de Distância até Eletroposto
+
+Descrição:Foi implementado o cálculo de distância entre o usuário e os eletropostos cadastrados no sistema.
+
+Causa Raiz: Conversão incorreta das coordenadas geográficas (latitude/longitude).
+
+Resolução: Ajuste da lógica de cálculo utilizando coordenadas padronizadas e função adequada de distância geográfica.
+
+Severidade: Alta.
+
+-------------------------------------------------------------------------------------------------------------------
 ## Entrega 03 - (27/04):
 
 ## Objetivo da Sprint 3
@@ -155,6 +176,7 @@ Implementar novas funcionalidades relacionadas à experiência do usuário e loc
 
 ## 🎥 Screencast
 [Link para o screencast](https://youtu.be/F9EFx8x7fEQ?si=dq450Kz7wLFkS81B)
+
 [Link para o screencast do e2e](https://youtu.be/dGR5i2hcrdk?si=4ygCGreKUCRIj_9J)
 
 
