@@ -1,0 +1,1681 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Agendamentos — Enertech Admin{% endblock %}
+
+{% block topbar_title %}
+    Agendamentos em tempo real
+{% endblock %}
+
+{% block topbar_actions %}{% endblock %}
+
+{% block body_class %} agenda-admin-page{% endblock %}
+
+{% block content %}
+
+<div class="agenda-dashboard">
+    <section class="agenda-hero">
+        <div class="agenda-hero__copy">
+            <span class="agenda-hero__eyebrow">Operacao / Recargas</span>
+            <h2>Dashboard de Agendamentos</h2>
+            <p>
+                Uma leitura limpa e atualizada da fila de recargas. Acompanhe o que esta pendente,
+                o que foi confirmado e o que ja esta em andamento sem depender de planilhas.
+            </p>
+
+            <div class="agenda-hero__actions">
+                <button class="agenda-btn agenda-btn--primary" type="button" onclick="recarregarAgendamentos()">
+                    Atualizar agora
+                </button>
+                <button class="agenda-btn agenda-btn--ghost" type="button" onclick="executarAutomacaoAgendamentos()">
+                    Rodar automacao
+                </button>
+            </div>
+        </div>
+
+        <div class="agenda-hero__meta">
+            <div class="agenda-hero__meta-card">
+                <span>Ultima atualizacao</span>
+                <strong id="lastSync">Carregando...</strong>
+            </div>
+
+            <div class="agenda-hero__meta-card">
+                <span>Filtro atual</span>
+                <strong id="activeFilterLabel">Todos os postos</strong>
+            </div>
+
+            <div class="agenda-hero__meta-card">
+                <span>Fila prioritaria</span>
+                <strong id="priorityCount">0 agendamentos</strong>
+            </div>
+
+            <div class="agenda-hero__meta-card">
+                <span>Taxa de conclusao</span>
+                <strong id="completionRate">0%</strong>
+            </div>
+        </div>
+    </section>
+
+    <section class="agenda-toolbar">
+        <div class="agenda-toolbar__field">
+            <label for="filtroPostoSelect">Posto</label>
+            <select id="filtroPostoSelect" class="agenda-input" onchange="filtrarPorPosto()">
+                <option value="">Todos os postos</option>
+                {% for ponto in pontos %}
+                    <option value="{{ ponto.id }}" {% if ponto_selecionado.id == ponto.id %}selected{% endif %}>
+                        {{ ponto.nome }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="agenda-toolbar__field agenda-toolbar__field--search">
+            <label for="searchInput">Buscar</label>
+            <input
+                id="searchInput"
+                class="agenda-input"
+                type="search"
+                placeholder="Cliente, posto, status ou ID"
+            >
+        </div>
+
+        <div class="agenda-toolbar__actions">
+            <button class="agenda-btn agenda-btn--ghost" type="button" onclick="limparFiltros()">Limpar</button>
+            <button class="agenda-btn agenda-btn--ghost" type="button" onclick="recarregarAgendamentos()">Recarregar</button>
+        </div>
+    </section>
+
+    <section class="agenda-metrics">
+        <article class="metric-card metric-card--green">
+            <span class="metric-card__label">Total</span>
+            <strong id="metricTotal" class="metric-card__value">0</strong>
+            <span class="metric-card__hint">agendamentos monitorados</span>
+        </article>
+
+        <article class="metric-card metric-card--amber">
+            <span class="metric-card__label">Pendentes</span>
+            <strong id="metricPendentes" class="metric-card__value">0</strong>
+            <span class="metric-card__hint">itens aguardando decisao</span>
+        </article>
+
+        <article class="metric-card metric-card--blue">
+            <span class="metric-card__label">Confirmados</span>
+            <strong id="metricConfirmados" class="metric-card__value">0</strong>
+            <span class="metric-card__hint">agendamentos liberados</span>
+        </article>
+
+        <article class="metric-card metric-card--orange">
+            <span class="metric-card__label">Em andamento</span>
+            <strong id="metricAndamento" class="metric-card__value">0</strong>
+            <span class="metric-card__hint">recargas ativas</span>
+        </article>
+
+        <article class="metric-card metric-card--violet">
+            <span class="metric-card__label">Receita estimada</span>
+            <strong id="metricValor" class="metric-card__value">R$ 0,00</strong>
+            <span class="metric-card__hint">valor total projetado</span>
+        </article>
+    </section>
+
+    <section class="agenda-insights">
+        <article class="agenda-panel">
+            <div class="panel-header">
+                <div>
+                    <h3>Distribuicao por status</h3>
+                    <p>Leitura rapida da saude operacional da fila.</p>
+                </div>
+            </div>
+
+            <div id="statusDistribution" class="status-bars"></div>
+        </article>
+
+        <article class="agenda-panel">
+            <div class="panel-header">
+                <div>
+                    <h3>Proximos agendamentos</h3>
+                    <p>Os proximos itens que vao entrar na operacao.</p>
+                </div>
+            </div>
+
+            <div id="upcomingList" class="upcoming-list"></div>
+        </article>
+    </section>
+
+    <section class="board-shell">
+        <div class="board-shell__header">
+            <div>
+                <h3>Painel Kanban</h3>
+                <p>Cada coluna mostra um estado da fila com acoes rapidas por cartao.</p>
+            </div>
+            <div class="board-note" id="boardNote">Atualizado em tempo real</div>
+        </div>
+
+        <div id="kanbanBoard" class="kanban-board"></div>
+    </section>
+</div>
+
+<!-- MODAL DE ATUALIZAR STATUS -->
+<div id="modalAtualizarStatus" class="modal-overlay" style="display: none;">
+    <div class="agenda-modal__card">
+        <div class="agenda-modal__header">
+            <div>
+                <div class="agenda-modal__title">Alterar Status</div>
+                <div class="agenda-modal__subtitle">Selecione o novo status do agendamento</div>
+            </div>
+            <button class="agenda-modal__close" type="button" onclick="fecharModalStatus()">&times;</button>
+        </div>
+
+        <div class="agenda-modal__content">
+            <div class="agenda-modal__label">Cliente</div>
+            <div id="modalStatusCliente" class="agenda-modal__value"></div>
+
+            <div class="agenda-modal__label">Novo status</div>
+            <select id="modalStatusSelect" class="agenda-input agenda-input--modal">
+                <option value="pendente">Pendente</option>
+                <option value="confirmado">Confirmado</option>
+                <option value="em_andamento">Em andamento</option>
+                <option value="concluido">Concluido</option>
+                <option value="cancelado">Cancelado</option>
+            </select>
+        </div>
+
+        <div class="agenda-modal__actions">
+            <button class="agenda-btn agenda-btn--primary" type="button" onclick="confirmarAtualizarStatus()">Atualizar</button>
+            <button class="agenda-btn agenda-btn--ghost" type="button" onclick="fecharModalStatus()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .agenda-dashboard {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-height: 100%;
+        height: auto;
+        padding: 18px;
+        box-sizing: border-box;
+        color: #e5eef8;
+    }
+
+    body.agenda-admin-page .main {
+        min-height: 0 !important;
+        height: 100% !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: thin !important;
+        scrollbar-color: rgba(8, 194, 95, 0.32) transparent !important;
+    }
+
+    body.agenda-admin-page .main::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    body.agenda-admin-page .main::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    body.agenda-admin-page .main::-webkit-scrollbar-thumb {
+        background: rgba(8, 194, 95, 0.32);
+        border-radius: 999px;
+    }
+
+    body.agenda-admin-page .main::-webkit-scrollbar-thumb:hover {
+        background: rgba(8, 194, 95, 0.5);
+    }
+
+    body.agenda-admin-page .content {
+        display: block !important;
+        min-height: min-content !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+
+    .agenda-hero {
+        position: relative;
+        overflow: hidden;
+        display: grid;
+        grid-template-columns: minmax(0, 1.7fr) minmax(320px, 1fr);
+        gap: 18px;
+        padding: 22px;
+        border-radius: 28px;
+        border: 1px solid rgba(8, 194, 95, 0.14);
+        background:
+            radial-gradient(circle at top right, rgba(8, 194, 95, 0.18), transparent 28%),
+            radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.16), transparent 24%),
+            linear-gradient(135deg, rgba(6, 10, 18, 0.98), rgba(12, 22, 34, 0.94));
+        box-shadow: 0 26px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .agenda-hero::before,
+    .agenda-hero::after {
+        content: '';
+        position: absolute;
+        border-radius: 999px;
+        filter: blur(30px);
+        opacity: 0.55;
+        pointer-events: none;
+    }
+
+    .agenda-hero::before {
+        width: 180px;
+        height: 180px;
+        background: rgba(8, 194, 95, 0.16);
+        right: -40px;
+        top: -20px;
+    }
+
+    .agenda-hero::after {
+        width: 220px;
+        height: 220px;
+        background: rgba(59, 130, 246, 0.12);
+        left: -60px;
+        bottom: -90px;
+    }
+
+    .agenda-hero__copy,
+    .agenda-hero__meta,
+    .agenda-panel,
+    .board-shell,
+    .agenda-toolbar,
+    .metric-card {
+        position: relative;
+        z-index: 1;
+    }
+
+    .agenda-hero__eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(8, 194, 95, 0.2);
+        background: rgba(8, 194, 95, 0.08);
+        color: #8ff0b2;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+
+    .agenda-hero__copy h2 {
+        margin: 14px 0 10px;
+        font-size: clamp(30px, 4vw, 48px);
+        line-height: 1.05;
+        letter-spacing: -0.04em;
+        color: #f8fbff;
+    }
+
+    .agenda-hero__copy p {
+        margin: 0;
+        max-width: 66ch;
+        color: #aab9ca;
+        line-height: 1.6;
+        font-size: 15px;
+    }
+
+    .agenda-hero__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .agenda-btn {
+        appearance: none;
+        border: 1px solid transparent;
+        border-radius: 14px;
+        padding: 11px 16px;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 13px;
+        letter-spacing: 0.01em;
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    }
+
+    .agenda-btn:hover {
+        transform: translateY(-1px);
+    }
+
+    .agenda-btn--primary {
+        background: linear-gradient(135deg, #00e676, #36f0a3);
+        color: #04120c;
+        box-shadow: 0 14px 30px rgba(8, 194, 95, 0.24);
+    }
+
+    .agenda-btn--ghost {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(255, 255, 255, 0.08);
+        color: #eef5fb;
+    }
+
+    .agenda-hero__meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .agenda-hero__meta-card {
+        padding: 16px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(12px);
+    }
+
+    .agenda-hero__meta-card span {
+        display: block;
+        color: #8aa1b7;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .agenda-hero__meta-card strong {
+        display: block;
+        margin-top: 8px;
+        color: #f8fbff;
+        font-size: 18px;
+        line-height: 1.3;
+    }
+
+    .agenda-toolbar {
+        display: grid;
+        grid-template-columns: minmax(240px, 1fr) minmax(280px, 1.2fr) auto;
+        gap: 14px;
+        padding: 16px 18px;
+        border-radius: 24px;
+        background: rgba(10, 15, 24, 0.84);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        backdrop-filter: blur(14px);
+    }
+
+    .agenda-toolbar__field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .agenda-toolbar__field label {
+        color: #8aa1b7;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+
+    .agenda-input {
+        width: 100%;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.04);
+        color: #f1f5f9;
+        padding: 13px 15px;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .agenda-input:focus {
+        border-color: rgba(8, 194, 95, 0.4);
+        background: rgba(255, 255, 255, 0.06);
+        box-shadow: 0 0 0 3px rgba(8, 194, 95, 0.12);
+    }
+
+    .agenda-input::placeholder {
+        color: #6f8093;
+    }
+
+    .agenda-toolbar__actions {
+        display: flex;
+        align-items: end;
+        justify-content: flex-end;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .agenda-metrics {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .metric-card {
+        overflow: hidden;
+        padding: 18px;
+        border-radius: 22px;
+        background: linear-gradient(180deg, rgba(17, 24, 39, 0.96), rgba(10, 15, 24, 0.96));
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        box-shadow: 0 18px 38px rgba(0, 0, 0, 0.2);
+    }
+
+    .metric-card::after {
+        content: '';
+        position: absolute;
+        right: -32px;
+        bottom: -30px;
+        width: 116px;
+        height: 116px;
+        border-radius: 999px;
+        opacity: 0.45;
+        filter: blur(6px);
+    }
+
+    .metric-card--green {
+        border-color: rgba(8, 194, 95, 0.22);
+    }
+
+    .metric-card--green::after {
+        background: rgba(8, 194, 95, 0.2);
+    }
+
+    .metric-card--amber {
+        border-color: rgba(251, 191, 36, 0.22);
+    }
+
+    .metric-card--amber::after {
+        background: rgba(251, 191, 36, 0.2);
+    }
+
+    .metric-card--blue {
+        border-color: rgba(59, 130, 246, 0.22);
+    }
+
+    .metric-card--blue::after {
+        background: rgba(59, 130, 246, 0.2);
+    }
+
+    .metric-card--orange {
+        border-color: rgba(249, 115, 22, 0.22);
+    }
+
+    .metric-card--orange::after {
+        background: rgba(249, 115, 22, 0.2);
+    }
+
+    .metric-card--violet {
+        border-color: rgba(139, 92, 246, 0.22);
+    }
+
+    .metric-card--violet::after {
+        background: rgba(139, 92, 246, 0.2);
+    }
+
+    .metric-card__label {
+        color: #8aa1b7;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+
+    .metric-card__value {
+        display: block;
+        margin-top: 12px;
+        color: #f8fbff;
+        font-size: clamp(26px, 3vw, 40px);
+        font-weight: 800;
+        line-height: 1.05;
+        letter-spacing: -0.04em;
+    }
+
+    .metric-card__hint {
+        display: block;
+        margin-top: 7px;
+        color: #a3b2c3;
+        font-size: 13px;
+    }
+
+    .agenda-insights {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(360px, 0.95fr);
+        gap: 14px;
+        min-height: 0;
+    }
+
+    .agenda-panel,
+    .board-shell {
+        min-height: 0;
+        border-radius: 26px;
+        background: rgba(10, 15, 24, 0.84);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        box-shadow: 0 18px 38px rgba(0, 0, 0, 0.18);
+        backdrop-filter: blur(14px);
+    }
+
+    .agenda-panel {
+        display: flex;
+        flex-direction: column;
+        padding: 18px;
+    }
+
+    .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .panel-header h3,
+    .board-shell__header h3 {
+        margin: 0;
+        color: #f8fbff;
+        font-size: 18px;
+        letter-spacing: -0.02em;
+    }
+
+    .panel-header p,
+    .board-shell__header p {
+        margin: 4px 0 0;
+        color: #8aa1b7;
+        font-size: 13px;
+    }
+
+    .status-bars {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .status-row {
+        display: grid;
+        grid-template-columns: 140px minmax(0, 1fr) 44px;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .status-row__label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #e2e8f0;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        box-shadow: 0 0 14px currentColor;
+    }
+
+    .status-track {
+        height: 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        overflow: hidden;
+    }
+
+    .status-fill {
+        height: 100%;
+        border-radius: inherit;
+    }
+
+    .status-count {
+        text-align: right;
+        color: #f8fbff;
+        font-weight: 700;
+    }
+
+    .upcoming-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-height: 0;
+        overflow: auto;
+        padding-right: 4px;
+    }
+
+    .upcoming-item {
+        padding: 14px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .upcoming-item__top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .upcoming-item__name {
+        color: #fff;
+        font-weight: 700;
+    }
+
+    .upcoming-item__meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 12px;
+        margin-top: 8px;
+        color: #8aa1b7;
+        font-size: 12px;
+    }
+
+    .upcoming-empty,
+    .column-empty {
+        padding: 16px 8px;
+        color: #8aa1b7;
+        font-size: 13px;
+    }
+
+    .board-shell {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        flex: 1;
+        padding: 18px;
+    }
+
+    .board-shell__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 14px;
+    }
+
+    .board-note {
+        flex-shrink: 0;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(8, 194, 95, 0.16);
+        background: rgba(8, 194, 95, 0.08);
+        color: #8ff0b2;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .kanban-board {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 14px;
+        min-height: 0;
+        overflow: auto;
+        padding-right: 4px;
+    }
+
+    .kanban-column {
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .kanban-column--pendente {
+        border-color: rgba(251, 191, 36, 0.2);
+    }
+
+    .kanban-column--confirmado {
+        border-color: rgba(59, 130, 246, 0.2);
+    }
+
+    .kanban-column--em_andamento {
+        border-color: rgba(249, 115, 22, 0.2);
+    }
+
+    .kanban-column--concluido {
+        border-color: rgba(34, 197, 94, 0.2);
+    }
+
+    .kanban-column--cancelado {
+        border-color: rgba(239, 68, 68, 0.2);
+    }
+
+    .column-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .column-header__title {
+        margin: 0;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 800;
+    }
+
+    .column-header__summary {
+        margin-top: 4px;
+        color: #8aa1b7;
+        font-size: 12px;
+    }
+
+    .column-header__count {
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .column-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-height: 0;
+    }
+
+    .booking-card {
+        padding: 14px;
+        border-radius: 18px;
+        background: rgba(8, 12, 18, 0.96);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        box-shadow: 0 12px 26px rgba(0, 0, 0, 0.18);
+        transition: transform 0.18s ease, border-color 0.18s ease;
+    }
+
+    .booking-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(8, 194, 95, 0.16);
+    }
+
+    .booking-card__top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .booking-status {
+        padding: 5px 9px;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .booking-id {
+        color: #7f93a9;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .booking-user {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 12px;
+    }
+
+    .booking-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, rgba(8, 194, 95, 0.92), rgba(54, 240, 163, 0.88));
+        color: #04120c;
+        font-weight: 900;
+        letter-spacing: 0.03em;
+    }
+
+    .booking-user h4 {
+        margin: 0;
+        color: #fff;
+        font-size: 15px;
+    }
+
+    .booking-user p {
+        margin: 3px 0 0;
+        color: #8aa1b7;
+        font-size: 12px;
+    }
+
+    .booking-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 14px;
+    }
+
+    .booking-meta span {
+        display: block;
+        color: #8aa1b7;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .booking-meta strong {
+        display: block;
+        margin-top: 4px;
+        color: #f8fbff;
+        font-size: 13px;
+    }
+
+    .booking-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+    }
+
+    .booking-action {
+        padding: 9px 11px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.04);
+        color: #e2e8f0;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 700;
+        transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+    }
+
+    .booking-action:hover {
+        transform: translateY(-1px);
+    }
+
+    .booking-action--success {
+        border-color: rgba(34, 197, 94, 0.22);
+        background: rgba(34, 197, 94, 0.12);
+        color: #4ade80;
+    }
+
+    .booking-action--danger {
+        border-color: rgba(239, 68, 68, 0.22);
+        background: rgba(239, 68, 68, 0.12);
+        color: #f87171;
+    }
+
+    .booking-empty {
+        padding: 14px 4px 2px;
+        color: #8aa1b7;
+        font-size: 13px;
+    }
+
+    .agenda-modal__card {
+        width: min(520px, calc(100vw - 24px));
+        border-radius: 24px;
+        padding: 18px;
+        background: rgba(10, 15, 24, 0.98);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 28px 70px rgba(0, 0, 0, 0.45);
+    }
+
+    .agenda-modal__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .agenda-modal__title {
+        color: #fff;
+        font-size: 18px;
+        font-weight: 800;
+    }
+
+    .agenda-modal__subtitle {
+        margin-top: 4px;
+        color: #8aa1b7;
+        font-size: 13px;
+    }
+
+    .agenda-modal__close {
+        width: 38px;
+        height: 38px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.04);
+        color: #fff;
+        cursor: pointer;
+        font-size: 22px;
+        line-height: 1;
+    }
+
+    .agenda-modal__content {
+        display: grid;
+        gap: 10px;
+        margin-top: 18px;
+    }
+
+    .agenda-modal__label {
+        color: #8aa1b7;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+
+    .agenda-modal__value {
+        color: #fff;
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 6px;
+    }
+
+    .agenda-input--modal {
+        margin-top: 2px;
+    }
+
+    .agenda-modal__actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 18px;
+        flex-wrap: wrap;
+    }
+
+    .status-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .status-chip--pendente { background: rgba(251, 191, 36, 0.12); color: #fbbf24; }
+    .status-chip--confirmado { background: rgba(59, 130, 246, 0.12); color: #60a5fa; }
+    .status-chip--em_andamento { background: rgba(249, 115, 22, 0.12); color: #fb923c; }
+    .status-chip--concluido { background: rgba(34, 197, 94, 0.12); color: #4ade80; }
+    .status-chip--cancelado { background: rgba(239, 68, 68, 0.12); color: #f87171; }
+
+    @media (max-width: 1360px) {
+        .agenda-metrics {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .agenda-insights {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 1100px) {
+        .agenda-hero {
+            grid-template-columns: 1fr;
+        }
+
+        .agenda-toolbar {
+            grid-template-columns: 1fr;
+        }
+
+        .agenda-toolbar__actions {
+            justify-content: stretch;
+        }
+
+        .agenda-toolbar__actions .agenda-btn {
+            flex: 1 1 180px;
+        }
+    }
+
+    @media (max-width: 760px) {
+        .agenda-dashboard {
+            gap: 12px;
+        }
+
+        .agenda-hero,
+        .agenda-toolbar,
+        .board-shell,
+        .agenda-panel {
+            border-radius: 22px;
+        }
+
+        .agenda-hero,
+        .board-shell,
+        .agenda-panel {
+            padding: 16px;
+        }
+
+        .agenda-metrics {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .board-shell__header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .booking-meta,
+        .status-row {
+            grid-template-columns: 1fr;
+        }
+
+        .status-count {
+            text-align: left;
+        }
+    }
+
+    @media (max-width: 520px) {
+        .agenda-metrics {
+            grid-template-columns: 1fr;
+        }
+
+        .agenda-hero__meta {
+            grid-template-columns: 1fr;
+        }
+
+        .agenda-modal__actions,
+        .agenda-hero__actions,
+        .booking-actions {
+            flex-direction: column;
+        }
+
+        .agenda-btn,
+        .booking-action {
+            width: 100%;
+        }
+    }
+</style>
+
+<script>
+    let agendamentosData = [];
+    let agendamentoAtualizar = null;
+    let intervaloAutomacao = null;
+    let buscaAtual = '';
+
+    const statusOrder = ['pendente', 'confirmado', 'em_andamento', 'concluido', 'cancelado'];
+    const currencyFormatter = new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+    });
+
+    const STATUS_META = {
+        pendente: {
+            label: 'Pendente',
+            icon: '⏳',
+            className: 'status-chip--pendente',
+            tone: 'rgba(251, 191, 36, 0.9)',
+            fill: 'linear-gradient(90deg, rgba(251, 191, 36, 0.95), rgba(245, 158, 11, 0.95))',
+        },
+        confirmado: {
+            label: 'Confirmado',
+            icon: '✓',
+            className: 'status-chip--confirmado',
+            tone: 'rgba(59, 130, 246, 0.9)',
+            fill: 'linear-gradient(90deg, rgba(59, 130, 246, 0.95), rgba(96, 165, 250, 0.95))',
+        },
+        em_andamento: {
+            label: 'Em andamento',
+            icon: '⚡',
+            className: 'status-chip--em_andamento',
+            tone: 'rgba(249, 115, 22, 0.9)',
+            fill: 'linear-gradient(90deg, rgba(249, 115, 22, 0.95), rgba(251, 146, 60, 0.95))',
+        },
+        concluido: {
+            label: 'Concluido',
+            icon: '✓',
+            className: 'status-chip--concluido',
+            tone: 'rgba(34, 197, 94, 0.9)',
+            fill: 'linear-gradient(90deg, rgba(34, 197, 94, 0.95), rgba(74, 222, 128, 0.95))',
+        },
+        cancelado: {
+            label: 'Cancelado',
+            icon: '✕',
+            className: 'status-chip--cancelado',
+            tone: 'rgba(239, 68, 68, 0.9)',
+            fill: 'linear-gradient(90deg, rgba(239, 68, 68, 0.95), rgba(248, 113, 113, 0.95))',
+        },
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('searchInput');
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                buscaAtual = this.value.trim().toLowerCase();
+                renderizarDashboard();
+            });
+        }
+
+        recarregarAgendamentos();
+        executarAutomacaoAgendamentos();
+
+        intervaloAutomacao = setInterval(executarAutomacaoAgendamentos, 30000);
+    });
+
+    window.addEventListener('beforeunload', function() {
+        if (intervaloAutomacao) {
+            clearInterval(intervaloAutomacao);
+        }
+    });
+
+    function executarAutomacaoAgendamentos() {
+        fetch('/agendamentos/processar-automaticos/', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCookie('csrftoken'),
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.resultado && (data.resultado.iniciados > 0 || data.resultado.concluidos > 0)) {
+                showDashboardToast('Atualizacao automatica concluida.', 'success');
+                recarregarAgendamentos();
+            }
+        })
+        .catch(err => {
+            console.error('Erro na automacao:', err);
+        });
+    }
+
+    function recarregarAgendamentos() {
+        const select = document.getElementById('filtroPostoSelect');
+        const pontoId = select ? select.value : '';
+
+        atualizarEtiquetaFiltro();
+
+        const url = pontoId
+            ? `/agendamentos/admin/?ponto_id=${pontoId}`
+            : '/agendamentos/admin/';
+
+        fetch(url, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            agendamentosData = data.agendamentos || [];
+            renderizarDashboard();
+            atualizarUltimaSincronia();
+        })
+        .catch(err => {
+            console.error('Erro ao carregar agendamentos:', err);
+            agendamentosData = [];
+            renderizarDashboard();
+            showDashboardToast('Nao foi possivel carregar os agendamentos.', 'error');
+        });
+    }
+
+    function limparFiltros() {
+        const select = document.getElementById('filtroPostoSelect');
+        const searchInput = document.getElementById('searchInput');
+
+        if (select) {
+            select.value = '';
+        }
+
+        if (searchInput) {
+            searchInput.value = '';
+        }
+
+        buscaAtual = '';
+        recarregarAgendamentos();
+    }
+
+    function filtrarPorPosto() {
+        recarregarAgendamentos();
+    }
+
+    function atualizarEtiquetaFiltro() {
+        const select = document.getElementById('filtroPostoSelect');
+        const label = document.getElementById('activeFilterLabel');
+
+        if (!label) {
+            return;
+        }
+
+        if (select && select.value) {
+            label.textContent = select.options[select.selectedIndex].textContent.trim();
+        } else {
+            label.textContent = 'Todos os postos';
+        }
+    }
+
+    function atualizarUltimaSincronia() {
+        const lastSync = document.getElementById('lastSync');
+        const now = new Date();
+
+        if (lastSync) {
+            lastSync.textContent = now.toLocaleTimeString('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+    }
+
+    function renderizarDashboard() {
+        const filtrados = getAgendamentosFiltrados();
+
+        renderizarMetricas(filtrados);
+        renderizarDistribuicao(filtrados);
+        renderizarUpcoming(filtrados);
+        renderizarKanban(filtrados);
+        atualizarTopo(filtrados);
+    }
+
+    function getAgendamentosFiltrados() {
+        if (!buscaAtual) {
+            return [...agendamentosData];
+        }
+
+        return agendamentosData.filter(agendamento => {
+            const haystack = [
+                agendamento.id,
+                agendamento.usuario,
+                agendamento.ponto,
+                agendamento.status,
+                agendamento.tempo_estimado,
+                agendamento.energia_solicitada,
+                agendamento.valor_estimado,
+            ].join(' ').toLowerCase();
+
+            return haystack.includes(buscaAtual);
+        });
+    }
+
+    function renderizarMetricas(filtrados) {
+        const total = filtrados.length;
+        const pendentes = filtrados.filter(a => a.status === 'pendente').length;
+        const confirmados = filtrados.filter(a => a.status === 'confirmado').length;
+        const andamento = filtrados.filter(a => a.status === 'em_andamento').length;
+        const valorTotal = filtrados.reduce((acc, agendamento) => acc + Number(agendamento.valor_estimado || 0), 0);
+
+        setText('metricTotal', total);
+        setText('metricPendentes', pendentes);
+        setText('metricConfirmados', confirmados);
+        setText('metricAndamento', andamento);
+        setText('metricValor', formatCurrency(valorTotal));
+    }
+
+    function renderizarDistribuicao(filtrados) {
+        const total = filtrados.length;
+        const container = document.getElementById('statusDistribution');
+
+        if (!container) {
+            return;
+        }
+
+        if (total === 0) {
+            container.innerHTML = '<div class="upcoming-empty">Nenhum agendamento encontrado com os filtros atuais.</div>';
+            return;
+        }
+
+        container.innerHTML = statusOrder.map(status => {
+            const meta = STATUS_META[status];
+            const count = filtrados.filter(agendamento => agendamento.status === status).length;
+            const percent = total ? Math.round((count / total) * 100) : 0;
+
+            return `
+                <div class="status-row">
+                    <div class="status-row__label" style="color: ${meta.tone};">
+                        <span class="status-dot" style="background: ${meta.tone}; color: ${meta.tone};"></span>
+                        <span>${meta.icon} ${meta.label}</span>
+                    </div>
+                    <div class="status-track">
+                        <div class="status-fill" style="width: ${percent}%; background: ${meta.fill};"></div>
+                    </div>
+                    <div class="status-count">${count}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function renderizarUpcoming(filtrados) {
+        const container = document.getElementById('upcomingList');
+
+        if (!container) {
+            return;
+        }
+
+        const proximos = [...filtrados]
+            .sort((a, b) => new Date(a.data_inicio) - new Date(b.data_inicio))
+            .slice(0, 5);
+
+        if (proximos.length === 0) {
+            container.innerHTML = '<div class="upcoming-empty">Nenhum agendamento previsto com os filtros atuais.</div>';
+            return;
+        }
+
+        container.innerHTML = proximos.map(agendamento => {
+            const meta = STATUS_META[agendamento.status];
+
+            return `
+                <article class="upcoming-item">
+                    <div class="upcoming-item__top">
+                        <div class="upcoming-item__name">${escapeHtml(agendamento.usuario)}</div>
+                        <span class="status-chip ${meta.className}">${meta.icon} ${meta.label}</span>
+                    </div>
+                    <div class="upcoming-item__meta">
+                        <span><strong>Posto:</strong> ${escapeHtml(agendamento.ponto)}</span>
+                        <span><strong>Inicio:</strong> ${formatDateTime(agendamento.data_inicio)}</span>
+                        <span><strong>Duracao:</strong> ${agendamento.tempo_estimado} min</span>
+                        <span><strong>Valor:</strong> ${formatCurrency(agendamento.valor_estimado)}</span>
+                    </div>
+                </article>
+            `;
+        }).join('');
+    }
+
+    function renderizarKanban(filtrados) {
+        const board = document.getElementById('kanbanBoard');
+
+        if (!board) {
+            return;
+        }
+
+        const grouped = Object.fromEntries(statusOrder.map(status => [status, []]));
+
+        filtrados
+            .slice()
+            .sort((a, b) => new Date(a.data_inicio) - new Date(b.data_inicio))
+            .forEach(agendamento => {
+                if (!grouped[agendamento.status]) {
+                    grouped[agendamento.status] = [];
+                }
+
+                grouped[agendamento.status].push(agendamento);
+            });
+
+        const total = filtrados.length || 1;
+
+        board.innerHTML = statusOrder.map(status => {
+            const meta = STATUS_META[status];
+            const items = grouped[status] || [];
+            const valorTotal = items.reduce((acc, agendamento) => acc + Number(agendamento.valor_estimado || 0), 0);
+            const count = items.length;
+            const percent = Math.round((count / total) * 100);
+
+            return `
+                <section class="kanban-column kanban-column--${status}">
+                    <div class="column-header">
+                        <div>
+                            <h4 class="column-header__title">${meta.icon} ${meta.label}</h4>
+                            <div class="column-header__summary">${count} agendamento(s) • ${percent}% da fila</div>
+                        </div>
+                        <div>
+                            <div class="column-header__count">${count}</div>
+                            <div class="column-header__summary">${formatCurrency(valorTotal)}</div>
+                        </div>
+                    </div>
+
+                    <div class="column-list">
+                        ${items.length ? items.map(agendamento => renderizarCardAgendamento(agendamento)).join('') : '<div class="booking-empty">Nenhum agendamento neste status.</div>'}
+                    </div>
+                </section>
+            `;
+        }).join('');
+    }
+
+    function renderizarCardAgendamento(agendamento) {
+        const meta = STATUS_META[agendamento.status];
+        const initials = getInitials(agendamento.usuario);
+
+        return `
+            <article class="booking-card">
+                <div class="booking-card__top">
+                    <span class="booking-status ${meta.className}">${meta.icon} ${meta.label}</span>
+                    <span class="booking-id">#${agendamento.id}</span>
+                </div>
+
+                <div class="booking-user">
+                    <div class="booking-avatar">${escapeHtml(initials)}</div>
+                    <div>
+                        <h4>${escapeHtml(agendamento.usuario)}</h4>
+                        <p>${escapeHtml(agendamento.ponto)}</p>
+                    </div>
+                </div>
+
+                <div class="booking-meta">
+                    <div>
+                        <span>Inicio</span>
+                        <strong>${formatDateTime(agendamento.data_inicio)}</strong>
+                    </div>
+                    <div>
+                        <span>Tempo</span>
+                        <strong>${agendamento.tempo_estimado} min</strong>
+                    </div>
+                    <div>
+                        <span>Energia</span>
+                        <strong>${Number(agendamento.energia_solicitada || 0).toFixed(1)} kWh</strong>
+                    </div>
+                    <div>
+                        <span>Valor</span>
+                        <strong>${formatCurrency(agendamento.valor_estimado)}</strong>
+                    </div>
+                </div>
+
+                <div class="booking-actions">
+                    ${agendamento.status === 'pendente'
+                        ? `
+                            <button class="booking-action booking-action--success" type="button" onclick="aceitarAgendamento(${agendamento.id})">Aceitar</button>
+                            <button class="booking-action booking-action--danger" type="button" onclick="negarAgendamento(${agendamento.id})">Negar</button>
+                        `
+                        : `
+                            <button class="booking-action" type="button" onclick="abrirModalStatus(${agendamento.id}, '${escapeJs(agendamento.usuario)}')">Alterar status</button>
+                        `
+                    }
+                </div>
+            </article>
+        `;
+    }
+
+    function atualizarTopo(filtrados) {
+        const pendentes = filtrados.filter(agendamento => agendamento.status === 'pendente').length;
+        const concluidos = filtrados.filter(agendamento => agendamento.status === 'concluido').length;
+        const total = filtrados.length;
+        const taxa = total ? Math.round((concluidos / total) * 100) : 0;
+
+        setText('priorityCount', `${pendentes} agendamentos`);
+        setText('completionRate', `${taxa}%`);
+        setText('boardNote', `${total} agendamento(s) exibido(s)`);
+    }
+
+    function formatCurrency(value) {
+        return currencyFormatter.format(Number(value || 0));
+    }
+
+    function formatDateTime(isoString) {
+        if (!isoString) {
+            return '--';
+        }
+
+        return new Date(isoString).toLocaleString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    function getInitials(name) {
+        if (!name) {
+            return '--';
+        }
+
+        return name
+            .split(' ')
+            .filter(Boolean)
+            .slice(0, 2)
+            .map(part => part.charAt(0).toUpperCase())
+            .join('');
+    }
+
+    function escapeJs(value) {
+        return String(value)
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/\r/g, '')
+            .replace(/\n/g, ' ');
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;');
+    }
+
+    function setText(id, value) {
+        const el = document.getElementById(id);
+
+        if (el) {
+            el.textContent = value;
+        }
+    }
+
+    function getStatusLabel(status) {
+        const meta = STATUS_META[status];
+        return meta ? `${meta.icon} ${meta.label}` : status;
+    }
+
+    function abrirModalStatus(agendamentoId, usuario) {
+        agendamentoAtualizar = agendamentoId;
+
+        const cliente = document.getElementById('modalStatusCliente');
+        const select = document.getElementById('modalStatusSelect');
+        const modal = document.getElementById('modalAtualizarStatus');
+
+        if (cliente) {
+            cliente.textContent = usuario;
+        }
+
+        if (select) {
+            select.value = 'confirmado';
+        }
+
+        if (modal) {
+            modal.style.display = 'flex';
+        }
+    }
+
+    function fecharModalStatus() {
+        const modal = document.getElementById('modalAtualizarStatus');
+
+        if (modal) {
+            modal.style.display = 'none';
+        }
+
+        agendamentoAtualizar = null;
+    }
+
+    function confirmarAtualizarStatus() {
+        if (!agendamentoAtualizar) {
+            return;
+        }
+
+        const select = document.getElementById('modalStatusSelect');
+        const novoStatus = select ? select.value : 'confirmado';
+
+        fetch(`/agendamentos/${agendamentoAtualizar}/atualizar-status/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                status: novoStatus
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'sucesso') {
+                showDashboardToast(data.mensagem, 'success');
+                fecharModalStatus();
+                recarregarAgendamentos();
+            } else {
+                showDashboardToast(data.error || 'Erro ao atualizar status.', 'error');
+            }
+        })
+        .catch(err => {
+            console.error('Erro:', err);
+            showDashboardToast('Erro ao atualizar status.', 'error');
+        });
+    }
+
+    function aceitarAgendamento(agendamentoId) {
+        if (!confirm('Deseja aceitar este agendamento?')) {
+            return;
+        }
+
+        fetch(`/agendamentos/${agendamentoId}/aceitar/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'sucesso') {
+                showDashboardToast('Agendamento aceito com sucesso.', 'success');
+                recarregarAgendamentos();
+            } else {
+                showDashboardToast(data.error || 'Erro ao aceitar agendamento.', 'error');
+            }
+        })
+        .catch(err => {
+            console.error('Erro:', err);
+            showDashboardToast('Erro ao aceitar agendamento.', 'error');
+        });
+    }
+
+    function negarAgendamento(agendamentoId) {
+        if (!confirm('Deseja negar este agendamento?')) {
+            return;
+        }
+
+        fetch(`/agendamentos/${agendamentoId}/negar/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'sucesso') {
+                showDashboardToast('Agendamento negado.', 'success');
+                recarregarAgendamentos();
+            } else {
+                showDashboardToast(data.error || 'Erro ao negar agendamento.', 'error');
+            }
+        })
+        .catch(err => {
+            console.error('Erro:', err);
+            showDashboardToast('Erro ao negar agendamento.', 'error');
+        });
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+
+        return cookieValue;
+    }
+
+    function showDashboardToast(message, type = 'info') {
+        if (typeof window.showToast === 'function') {
+            window.showToast(message, type);
+        } else {
+            alert(message);
+        }
+    }
+</script>
+
+{% endblock %}

@@ -86,6 +86,15 @@ class AccountsE2ETests(TestCase):
         self.assertRedirects(logout_response, reverse("login"))
         self.assertNotIn("_auth_user_id", self.client.session)
 
+    def test_auth_pages_enable_scroll_layout(self):
+        login_response = self.client.get(reverse("login"))
+        register_response = self.client.get(reverse("register"))
+
+        self.assertContains(login_response, '<html lang="pt-br" class="auth-page">', html=False)
+        self.assertContains(login_response, '<body class="auth-page">', html=False)
+        self.assertContains(register_response, '<html lang="pt-br" class="auth-page">', html=False)
+        self.assertContains(register_response, '<body class="auth-page">', html=False)
+
     def test_password_strength_endpoint_guides_registration_flow(self):
         weak_response = self.post_json("validar_senha", {"password": "abc"})
         strong_response = self.post_json("validar_senha", {"password": "SenhaForte123!"})
@@ -191,3 +200,14 @@ class AccountsE2ETests(TestCase):
         self.assertEqual(delete_response.status_code, 200)
         self.assertEqual(delete_response.json()["status"], "removido")
         self.assertFalse(Ponto.objects.filter(id=ponto_id).exists())
+
+    def test_admin_agendamentos_renders_dashboard_not_table(self):
+        self.assertTrue(self.client.login(username="admin", password="AdminForte123!"))
+
+        response = self.client.get(reverse("admin_agendamentos"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '<body class="logged agenda-admin-page">', html=False)
+        self.assertContains(response, 'class="agenda-dashboard"')
+        self.assertContains(response, 'id="kanbanBoard"')
+        self.assertNotContains(response, '<table class="admin-table">')

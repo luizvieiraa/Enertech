@@ -1397,9 +1397,207 @@ window.confirmarAgendamento = function() {
     });
 };
 
+const MEUS_AGENDAMENTOS_STATUS_ORDER = ['pendente', 'confirmado', 'em_andamento', 'concluido', 'cancelado'];
+
+const MEUS_AGENDAMENTOS_STATUS_META = {
+    pendente: {
+        label: 'Pendente',
+        icon: '⏳',
+        className: 'status-pendente',
+    },
+    confirmado: {
+        label: 'Confirmado',
+        icon: '✓',
+        className: 'status-confirmado',
+    },
+    em_andamento: {
+        label: 'Em andamento',
+        icon: '⚡',
+        className: 'status-em_andamento',
+    },
+    concluido: {
+        label: 'Concluido',
+        icon: '✓',
+        className: 'status-concluido',
+    },
+    cancelado: {
+        label: 'Cancelado',
+        icon: '✕',
+        className: 'status-cancelado',
+    },
+};
+
+const MEUS_AGENDAMENTOS_MOEDA = new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+});
+
+const MEUS_AGENDAMENTOS_DATA_OPTS = {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+};
+
+function escaparHtml(valor) {
+    return String(valor ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function formatarAgendamentoData(valor) {
+    if (!valor) return '--';
+    return new Date(valor).toLocaleString('pt-BR', MEUS_AGENDAMENTOS_DATA_OPTS);
+}
+
+function formatarAgendamentoValor(valor) {
+    return MEUS_AGENDAMENTOS_MOEDA.format(Number(valor || 0));
+}
+
+function getMetaAgendamento(status) {
+    return MEUS_AGENDAMENTOS_STATUS_META[status] || MEUS_AGENDAMENTOS_STATUS_META.cancelado;
+}
+
+function ordenarAgendamentosDashboard(a, b) {
+    const ordemA = MEUS_AGENDAMENTOS_STATUS_ORDER.indexOf(a.status);
+    const ordemB = MEUS_AGENDAMENTOS_STATUS_ORDER.indexOf(b.status);
+
+    if (ordemA !== ordemB) {
+        return ordemA - ordemB;
+    }
+
+    return new Date(a.data_inicio) - new Date(b.data_inicio);
+}
+
+function fecharMeusAgendamentos() {
+    document.querySelectorAll('.meus-agendamentos-modal').forEach(modal => modal.remove());
+}
+
+function renderizarMeusAgendamentosCard(agend) {
+    const meta = getMetaAgendamento(agend.status);
+
+    return `
+        <article class="meus-agendamentos-card meus-agendamentos-card--${agend.status}">
+            <div class="meus-agendamentos-card__top">
+                <div>
+                    <span class="meus-agendamentos-card__id">Agendamento #${agend.id}</span>
+                    <h4>${escaparHtml(agend.ponto_nome)}</h4>
+                </div>
+                <span class="meus-agendamentos-status ${meta.className}">${meta.icon} ${meta.label}</span>
+            </div>
+
+            <div class="meus-agendamentos-card__meta">
+                <div>
+                    <span>Data / Hora</span>
+                    <strong>${formatarAgendamentoData(agend.data_inicio)}</strong>
+                </div>
+                <div>
+                    <span>Energia</span>
+                    <strong>${Number(agend.energia_solicitada || 0).toFixed(1)} kWh</strong>
+                </div>
+                <div>
+                    <span>Tempo</span>
+                    <strong>${agend.tempo_estimado} min</strong>
+                </div>
+                <div>
+                    <span>Valor estimado</span>
+                    <strong>${formatarAgendamentoValor(agend.valor_estimado)}</strong>
+                </div>
+            </div>
+        </article>
+    `;
+}
+
+function renderizarMeusAgendamentosModal(agendamentos) {
+    const total = agendamentos.length;
+    const pendentes = agendamentos.filter(agend => agend.status === 'pendente').length;
+    const confirmados = agendamentos.filter(agend => agend.status === 'confirmado').length;
+    const andamento = agendamentos.filter(agend => agend.status === 'em_andamento').length;
+    const valorTotal = agendamentos.reduce((acc, agend) => acc + Number(agend.valor_estimado || 0), 0);
+
+    const listagem = total > 0
+        ? [...agendamentos].sort(ordenarAgendamentosDashboard).map(renderizarMeusAgendamentosCard).join('')
+        : `
+            <div class="meus-agendamentos-empty">
+                <div class="meus-agendamentos-empty__icon">📭</div>
+                <h4>Você ainda não tem agendamentos</h4>
+                <p>Quando você reservar uma recarga, ela aparece aqui com o mesmo padrão visual do restante do sistema.</p>
+                <button class="meus-agendamentos-close-btn" type="button" onclick="fecharMeusAgendamentos()">Voltar ao mapa</button>
+            </div>
+        `;
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay meus-agendamentos-modal';
+    modal.style.display = 'flex';
+    modal.innerHTML = `
+        <div class="meus-agendamentos-shell" onclick="event.stopPropagation()">
+            <section class="meus-agendamentos-hero">
+                <div class="meus-agendamentos-copy">
+                    <span class="meus-agendamentos-eyebrow">Operação / Recargas</span>
+                    <h3>Meus Agendamentos</h3>
+                    <p>Uma leitura moderna da sua fila de recargas, com cards, status e valores atualizados em tempo real.</p>
+
+                    <div class="meus-agendamentos-tags">
+                        <span class="meus-agendamentos-tag">${total} total</span>
+                        <span class="meus-agendamentos-tag">${pendentes} pendentes</span>
+                        <span class="meus-agendamentos-tag">${confirmados} confirmados</span>
+                    </div>
+                </div>
+
+                <div class="meus-agendamentos-metrics">
+                    <article class="meus-agendamentos-metric-card meus-agendamentos-metric-card--green">
+                        <span>Total</span>
+                        <strong>${total}</strong>
+                        <small>agendamentos registrados</small>
+                    </article>
+
+                    <article class="meus-agendamentos-metric-card meus-agendamentos-metric-card--amber">
+                        <span>Pendentes</span>
+                        <strong>${pendentes}</strong>
+                        <small>aguardando decisao</small>
+                    </article>
+
+                    <article class="meus-agendamentos-metric-card meus-agendamentos-metric-card--blue">
+                        <span>Em andamento</span>
+                        <strong>${andamento}</strong>
+                        <small>recargas ativas</small>
+                    </article>
+
+                    <article class="meus-agendamentos-metric-card meus-agendamentos-metric-card--violet">
+                        <span>Valor total</span>
+                        <strong>${formatarAgendamentoValor(valorTotal)}</strong>
+                        <small>estimativa consolidada</small>
+                    </article>
+                </div>
+            </section>
+
+            <section class="meus-agendamentos-body">
+                <div class="meus-agendamentos-section-header">
+                    <div>
+                        <h4>Lista de agendamentos</h4>
+                        <p>${total > 0 ? 'Os próximos itens aparecem primeiro na fila.' : 'Nenhum agendamento encontrado no momento.'}</p>
+                    </div>
+                    <button class="meus-agendamentos-close-btn meus-agendamentos-close-btn--ghost" type="button" onclick="fecharMeusAgendamentos()">Fechar</button>
+                </div>
+
+                <div class="meus-agendamentos-list">
+                    ${listagem}
+                </div>
+            </section>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+}
+
 window.abrirMeusAgendamentos = function() {
     if (!verificarAutenticacao('ver agendamentos')) return;
-    
+
+    fecharMeusAgendamentos();
     showToast('Carregando seus agendamentos...', 'info');
 
     fetch('/agendamentos/meus/')
@@ -1408,47 +1606,8 @@ window.abrirMeusAgendamentos = function() {
             return r.json();
         })
         .then(data => {
-            const agendamentos = data.agendamentos;
-            if (agendamentos.length === 0) {
-                showToast('Você não tem agendamentos', 'info');
-                return;
-            }
-
-            let html = '<div style="max-width: 600px; max-height: 80vh; overflow-y: auto;">';
-            agendamentos.forEach(agend => {
-                const data = new Date(agend.data_inicio).toLocaleString('pt-BR');
-                const statusCor = agend.status === 'pendente' ? '#fbbf24'
-                    : agend.status === 'confirmado' ? '#3b82f6'
-                    : agend.status === 'em_andamento' ? '#f97316'
-                    : agend.status === 'concluido' ? '#22c55e'
-                    : '#ef4444';
-                
-                html += `
-                    <div style="background: rgba(30, 30, 30, 0.8); padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(0, 230, 118, 0.2);">
-                        <div style="font-weight: 600; color: #e0f2fe; margin-bottom: 5px;">${agend.ponto_nome}</div>
-                        <div style="font-size: 12px; color: #94a3b8; margin-bottom: 3px;">📅 ${data}</div>
-                        <div style="font-size: 12px; color: #94a3b8; margin-bottom: 3px;">⚡ ${agend.energia_solicitada} kWh · ⏱️ ${agend.tempo_estimado}min</div>
-                        <div style="font-size: 12px; color: #94a3b8; margin-bottom: 5px;">💰 R$ ${agend.valor_estimado || '0,00'}</div>
-                        <div style="display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; color: ${statusCor}; background: ${statusCor}33;">
-                            ${agend.status.charAt(0).toUpperCase() + agend.status.slice(1)}
-                        </div>
-                    </div>
-                `;
-            });
-            html += '</div>';
-
-            // Mostrar modal provisório com agendamentos
-            const modal = document.createElement('div');
-            modal.className = 'modal-overlay';
-            modal.style.display = 'flex';
-            modal.innerHTML = `
-                <div class="card" style="max-width: 600px;">
-                    <div class="card-title">📅 Meus Agendamentos</div>
-                    ${html}
-                    <button class="btn" onclick="this.closest('.modal-overlay').remove();" style="width: 100%; margin-top: 12px;">Fechar</button>
-                </div>
-            `;
-            document.body.appendChild(modal);
+            const agendamentos = Array.isArray(data.agendamentos) ? data.agendamentos : [];
+            renderizarMeusAgendamentosModal(agendamentos);
         })
         .catch(err => {
             console.error('Erro:', err);

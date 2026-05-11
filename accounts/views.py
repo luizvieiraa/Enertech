@@ -563,7 +563,7 @@ def admin_agendamentos(request):
         'pontos': pontos,
         'ponto_selecionado': ponto,
     }
-    return render(request, 'accounts/admin_agendamentos.html', context)
+    return render(request, 'accounts/admin_agendamentos_dashboard.html', context)
 
 
 @staff_member_required
