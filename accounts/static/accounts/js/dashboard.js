@@ -485,7 +485,7 @@ window.adicionarConectorForm = function () {
         </select>
         <input type="number" step="0.1" class="form-control conector-kw-inp" placeholder="kW" style="flex:1;">
         <button type="button" class="btn btn-small btn-danger"
-                onclick="removerConectorForm(${idx})" style="flex-shrink:0;">✕</button>`;
+                onclick="removerConectorForm(${idx})">✕</button>`;
     document.getElementById('listaConectoresForm').appendChild(div);
 };
 

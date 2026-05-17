@@ -52,9 +52,9 @@
         </div>
         <div class="form-group">
             <label class="form-label">Endereço</label>
-            <div style="display:flex;gap:8px;align-items:flex-end;">
+            <div class="form-inline-row">
                 <input type="text" id="endereco_campo" class="form-control" placeholder="Ex: Rua das Flores, 123, Recife, PE" style="flex:1;">
-                <button type="button" class="btn btn-small" onclick="buscarEndereco()" style="white-space:nowrap;">Buscar 🔍</button>
+                <button type="button" class="btn btn-small btn-secondary btn-inline" onclick="buscarEndereco()">Buscar 🔍</button>
             </div>
             <div id="endereco_resultado" style="font-size:12px;color:#94a3b8;margin-top:6px;"></div>
         </div>
@@ -113,17 +113,16 @@
         </div>
 
         <div class="form-group">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div class="form-inline-header">
                 <label class="form-label" style="margin:0;">Conectores / Vagas</label>
-                <button type="button" class="btn-ghost btn-small" onclick="adicionarConectorForm()">+ Adicionar</button>
+                <button type="button" class="btn btn-small btn-secondary btn-inline" onclick="adicionarConectorForm()">+ Adicionar</button>
             </div>
             <div id="listaConectoresForm"></div>
         </div>
 
-        <div style="display:flex;gap:10px;margin-top:20px;">
-            <button class="btn" onclick="salvarPonto()">Salvar Ponto</button>
-            <button class="btn" onclick="fecharFormulario()"
-                    style="background:rgba(51,65,85,0.8);color:#94a3b8;box-shadow:none;">Cancelar</button>
+        <div class="modal-actions">
+            <button class="btn btn-primary" onclick="salvarPonto()">Salvar Ponto</button>
+            <button class="btn btn-secondary" onclick="fecharFormulario()">Cancelar</button>
         </div>
     </div>
 </div>
@@ -152,7 +151,7 @@
             <textarea id="avalComentario" class="form-control" rows="3"
                       placeholder="Deixe um comentário (opcional)..."
                       style="margin-top:12px;resize:vertical;"></textarea>
-            <button class="btn" style="margin-top:12px;" onclick="enviarAvaliacao()">Enviar avaliação</button>
+            <button class="btn btn-primary" style="margin-top:12px;" onclick="enviarAvaliacao()">Enviar avaliação</button>
         </div>
         <div class="aval-lista-section">
             <div class="form-label" style="margin-bottom:12px;">O que outros usuários acharam</div>
@@ -168,10 +167,9 @@
         <div class="card-title" id="modalDispTitle">Editar Disponibilidade</div>
         <div class="card-subtitle" id="modalDispSubtitle">Marque quais conectores estão disponíveis</div>
         <div id="conectoresEditList" style="margin:20px 0;"></div>
-        <div style="display:flex;gap:10px;margin-top:20px;">
-            <button class="btn" onclick="salvarDisponibilidade()">Salvar Alterações</button>
-            <button class="btn" onclick="fecharEditarDisp()"
-                    style="background:rgba(51,65,85,0.8);color:#94a3b8;box-shadow:none;">Cancelar</button>
+        <div class="modal-actions">
+            <button class="btn btn-primary" onclick="salvarDisponibilidade()">Salvar Alterações</button>
+            <button class="btn btn-secondary" onclick="fecharEditarDisp()">Cancelar</button>
         </div>
     </div>
 </div>
@@ -208,10 +206,9 @@
             <div id="agendValorEstimado" style="font-size: 20px; color: #00e676; font-weight: bold; margin-top: 5px;">R$ 0,00</div>
         </div>
         
-        <div style="display:flex;gap:10px;margin-top:20px;">
-            <button class="btn" id="btnConfirmarAgendamento" onclick="confirmarAgendamento()">Agendar Recarga</button>
-            <button class="btn" onclick="fecharAgendamento()"
-                    style="background:rgba(51,65,85,0.8);color:#94a3b8;box-shadow:none;">Cancelar</button>
+        <div class="modal-actions">
+            <button class="btn btn-primary" id="btnConfirmarAgendamento" onclick="confirmarAgendamento()">Agendar Recarga</button>
+            <button class="btn btn-secondary" onclick="fecharAgendamento()">Cancelar</button>
         </div>
     </div>
 </div>

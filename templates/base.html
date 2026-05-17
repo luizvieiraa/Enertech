@@ -145,6 +145,16 @@
             </a>
             <h1>{% block topbar_title %}Olá, {{ user.username }} 👋{% endblock %}</h1>
         </div>
+        <div class="topbar-center">
+            {% if user.is_staff or user.is_superuser %}
+            <a href="#" class="topbar-action topbar-action--primary" onclick="abrirFormulario(); return false;">
+                Novo Ponto
+            </a>
+            <a href="{% url 'admin_agendamentos' %}" class="topbar-action topbar-action--secondary">
+                Agendamentos
+            </a>
+            {% endif %}
+        </div>
         <div class="topbar-right">
             <button class="mobile-hamburger" id="mobileHamburger" onclick="toggleMobileSidebar()" aria-label="Menu">
                 <span></span><span></span><span></span>
