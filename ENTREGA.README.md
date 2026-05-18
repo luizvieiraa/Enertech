@@ -211,7 +211,8 @@ Finalizar as histórias que faltam do backlog do projeto e implementar a automa�
 * 🎥 **Screencast com ênfase nas novas histórias**[botar o link do screencast das novas historias aqui(a URL tem que aparecer no screencast)]
 
 ## 📋 Backlog Finalizado
-[botar o print do backlog do jira pronto aqui]
+
+(<Captura de Tela 2026-05-18 às 09.28.03.png>)
 
 ## 🔗 Repositório, Versionamento e Issue Tracker
 * continuamos com commits semanais na branch principal, destacando as evoluções
