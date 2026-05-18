@@ -3,7 +3,7 @@ from accounts import views
 from .views import (
     CustomLoginView, RegisterView, home, salvar_ponto, remover_ponto, 
     atualizar_disponibilidade, geocodificar_endereco, criar_agendamento,
-    meus_agendamentos, cancelar_agendamento, admin_agendamentos,
+    meus_agendamentos, meus_agendamentos_dashboard, cancelar_agendamento, admin_agendamentos,
     atualizar_status_agendamento, aceitar_agendamento, negar_agendamento,
     validar_senha_ajax, atualizar_onboarding, resetar_onboarding
 )
@@ -29,6 +29,7 @@ urlpatterns = [
     # AGENDAMENTO DE RECARGA
     # ═════════════════════════════════════════════════════════════════════
     path('agendamentos/criar/', criar_agendamento, name='criar_agendamento'),
+    path('agendamentos/meu-dashboard/', meus_agendamentos_dashboard, name='meus_agendamentos_dashboard'),
     path('agendamentos/meus/', meus_agendamentos, name='meus_agendamentos'),
     path('agendamentos/<int:id>/cancelar/', cancelar_agendamento, name='cancelar_agendamento'),
     path('agendamentos/admin/', admin_agendamentos, name='admin_agendamentos'),

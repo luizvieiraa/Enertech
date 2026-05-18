@@ -14,6 +14,8 @@ import re
 import logging
 from datetime import datetime
 
+from django.utils import timezone
+
 from .models import Avaliacao, Conector, Ponto, Agendamento
 
 # Configurar logger
@@ -72,6 +74,73 @@ def home(request):
         'pontos': pontos,
         'onboarding_completed': onboarding_completed,
         'is_authenticated': request.user.is_authenticated,
+    })
+
+
+def formatar_moeda_brl(valor):
+    """Formata um numero em moeda brasileira sem depender de locale."""
+    valor = float(valor or 0)
+    return f"R$ {valor:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+
+
+def _status_meta_agendamento(status):
+    meta = {
+        'pendente': {'label': 'Pendente', 'class_name': 'status-pendente'},
+        'confirmado': {'label': 'Confirmado', 'class_name': 'status-confirmado'},
+        'em_andamento': {'label': 'Em andamento', 'class_name': 'status-em_andamento'},
+        'concluido': {'label': 'Concluido', 'class_name': 'status-concluido'},
+        'cancelado': {'label': 'Cancelado', 'class_name': 'status-cancelado'},
+    }
+    return meta.get(status, meta['cancelado'])
+
+
+@login_required
+def meus_agendamentos_dashboard(request):
+    """Dashboard do usuario com seus proprios agendamentos."""
+    agendamentos_queryset = (
+        Agendamento.objects.filter(usuario=request.user)
+        .select_related('ponto')
+        .order_by('data_inicio')
+    )
+
+    agendamentos = []
+    valor_total_bruto = 0
+    for agendamento in agendamentos_queryset:
+        meta = _status_meta_agendamento(agendamento.status)
+        valor_estimado = float(agendamento.valor_estimado or 0)
+        valor_total_bruto += valor_estimado
+        agendamentos.append({
+            'id': agendamento.id,
+            'ponto_nome': agendamento.ponto.nome,
+            'data_inicio': agendamento.data_inicio,
+            'tempo_estimado': agendamento.tempo_estimado,
+            'energia_solicitada': agendamento.energia_solicitada,
+            'valor_estimado': formatar_moeda_brl(valor_estimado),
+            'status': agendamento.status,
+            'status_label': meta['label'],
+            'status_class': meta['class_name'],
+        })
+
+    total = len(agendamentos)
+    pendentes = sum(1 for agendamento in agendamentos if agendamento['status'] == 'pendente')
+    confirmados = sum(1 for agendamento in agendamentos if agendamento['status'] == 'confirmado')
+    em_andamento = sum(1 for agendamento in agendamentos if agendamento['status'] == 'em_andamento')
+    proximo_agendamento = agendamentos_queryset.filter(data_inicio__gte=timezone.now()).first()
+    if proximo_agendamento is None:
+        proximo_agendamento = agendamentos_queryset.first()
+
+    metrics = {
+        'total': total,
+        'pendentes': pendentes,
+        'confirmados': confirmados,
+        'em_andamento': em_andamento,
+        'valor_total': formatar_moeda_brl(valor_total_bruto),
+        'proximo': proximo_agendamento,
+    }
+
+    return render(request, 'accounts/meus_agendamentos_dashboard.html', {
+        'agendamentos': agendamentos,
+        'metrics': metrics,
     })
 
 

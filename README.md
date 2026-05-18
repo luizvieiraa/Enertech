@@ -97,8 +97,10 @@ python manage.py runserver
 Acesse no navegador:
 
 ```
-http://127.0.0.1:8000/
+https://127.0.0.1:8000/
 ```
+
+Na primeira execução, o projeto gera um certificado local de desenvolvimento e registra a CA no Windows para o navegador confiar no HTTPS local.
 
 ---
 

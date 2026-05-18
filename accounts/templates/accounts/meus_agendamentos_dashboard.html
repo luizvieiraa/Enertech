@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block title %}Meu dashboard — Enertech{% endblock %}
+
+{% block maplibre_css %}{% endblock %}
+
+{% block body_class %} meus-agendamentos-page{% endblock %}
+
+{% block topbar_title %}
+    Meu dashboard
+{% endblock %}
+
+{% block content %}
+<div class="meus-agendamentos-page-wrap">
+    <div class="meus-agendamentos-shell meus-agendamentos-shell--page">
+        <section class="meus-agendamentos-hero">
+            <div class="meus-agendamentos-copy">
+                <span class="meus-agendamentos-eyebrow">Recargas / Usuario</span>
+                <h3>Seu historico de recargas</h3>
+                <p>Acompanhe os agendamentos que voce realizou, com status, valores e horarios em uma visao unica.</p>
+
+                <div class="meus-agendamentos-tags">
+                    <span class="meus-agendamentos-tag">{{ metrics.total }} total</span>
+                    <span class="meus-agendamentos-tag">{{ metrics.pendentes }} pendentes</span>
+                    <span class="meus-agendamentos-tag">{{ metrics.confirmados }} confirmados</span>
+                    {% if metrics.proximo %}
+                        <span class="meus-agendamentos-tag">Proximo: {{ metrics.proximo.data_inicio|date:"d/m H:i" }}</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="meus-agendamentos-metrics">
+                <article class="meus-agendamentos-metric-card meus-agendamentos-metric-card--green">
+                    <span>Total</span>
+                    <strong>{{ metrics.total }}</strong>
+                    <small>agendamentos registrados</small>
+                </article>
+
+                <article class="meus-agendamentos-metric-card meus-agendamentos-metric-card--amber">
+                    <span>Pendentes</span>
+                    <strong>{{ metrics.pendentes }}</strong>
+                    <small>aguardando decisao</small>
+                </article>
+
+                <article class="meus-agendamentos-metric-card meus-agendamentos-metric-card--blue">
+                    <span>Em andamento</span>
+                    <strong>{{ metrics.em_andamento }}</strong>
+                    <small>recargas ativas</small>
+                </article>
+
+                <article class="meus-agendamentos-metric-card meus-agendamentos-metric-card--violet">
+                    <span>Valor total</span>
+                    <strong>{{ metrics.valor_total }}</strong>
+                    <small>estimativa consolidada</small>
+                </article>
+            </div>
+        </section>
+
+        <section class="meus-agendamentos-body">
+            <div class="meus-agendamentos-section-header">
+                <div>
+                    <h4>Lista de agendamentos</h4>
+                    <p>{% if agendamentos %}Os proximos itens aparecem primeiro na fila.{% else %}Nenhum agendamento encontrado no momento.{% endif %}</p>
+                </div>
+                <a class="meus-agendamentos-close-btn meus-agendamentos-close-btn--ghost" href="{% url 'home' %}">Voltar ao mapa</a>
+            </div>
+
+            {% if agendamentos %}
+                <div class="meus-agendamentos-list meus-agendamentos-list--page">
+                    {% for agendamento in agendamentos %}
+                        <article class="meus-agendamentos-card meus-agendamentos-card--{{ agendamento.status }}">
+                            <div class="meus-agendamentos-card__top">
+                                <div>
+                                    <span class="meus-agendamentos-card__id">Agendamento #{{ agendamento.id }}</span>
+                                    <h4>{{ agendamento.ponto_nome }}</h4>
+                                </div>
+                                <span class="meus-agendamentos-status {{ agendamento.status_class }}">{{ agendamento.status_label }}</span>
+                            </div>
+
+                            <div class="meus-agendamentos-card__meta">
+                                <div>
+                                    <span>Data / Hora</span>
+                                    <strong>{{ agendamento.data_inicio|date:"d/m/Y H:i" }}</strong>
+                                </div>
+                                <div>
+                                    <span>Energia</span>
+                                    <strong>{{ agendamento.energia_solicitada|floatformat:1 }} kWh</strong>
+                                </div>
+                                <div>
+                                    <span>Tempo</span>
+                                    <strong>{{ agendamento.tempo_estimado }} min</strong>
+                                </div>
+                                <div>
+                                    <span>Valor estimado</span>
+                                    <strong>{{ agendamento.valor_estimado }}</strong>
+                                </div>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="meus-agendamentos-empty">
+                    <div class="meus-agendamentos-empty__icon">--</div>
+                    <h4>Voce ainda nao tem agendamentos</h4>
+                    <p>Quando voce reservar uma recarga, ela aparece aqui com o mesmo padrao visual do restante do sistema.</p>
+                    <a class="meus-agendamentos-close-btn" href="{% url 'home' %}">Ir para o mapa</a>
+                </div>
+            {% endif %}
+        </section>
+    </div>
+</div>
+{% endblock %}

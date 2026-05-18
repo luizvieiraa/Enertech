@@ -129,6 +129,7 @@ yarn.lock
 # ================================
 # TEMPORÁRIOS / CACHE
 # ================================
+.devcerts/
 *.tmp
 *.bak
 *.backup

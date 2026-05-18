@@ -187,7 +187,216 @@ Implementar novas funcionalidades relacionadas à experiência do usuário e loc
 Optamos por nao realizar os relatórios, pois foram considerados uma melhoria futura, prevista para uma etapa posterior após estabilização das funcionalidades centrais do sistema.
 
  
+## Entrega 04 - (18/05):
 
+## 🎯 Objetivo da Sprint 4
 
+Finalizar as histórias que faltam do backlog do projeto e implementar a automação dos processos de testes e deploy, garantindo:
+* Implementação das histórias restantes 
+* Criação e gerenciamento da Sprint 4 no JIRA
+* Ambiente de versionamento atuante 
+* Configuração de CI/CD com build, testes e deploy automatizados no GitHub
+* Testes de sistema (E2E) automatizados 
+* Documentação clara no arquivo README e criação do CONTRIBUTING.md
 
+## 📌 Quadro da Sprint 4
+* **Sprint 4:** Finalização do Backlog
 
+[botar o print do quadro da sprint 4]
+
+### Histórias finais adicionadas:
+* SCRUM-7: Login inválido
+* SCRUM-8: Ranking de eletropostos
+
+* 🎥 **Screencast com ênfase nas novas histórias**[botar o link do screencast das novas historias aqui(a URL tem que aparecer no screencast)]
+
+## 📋 Backlog Finalizado
+[botar o print do backlog do jira pronto aqui]
+
+## 🔗 Repositório, Versionamento e Issue Tracker
+* continuamos com commits semanais na branch principal, destacando as evoluções
+* Eventuais falhas e tarefas pontuais do projeto foram centralizadas diretamente na aba de **Issues do GitHub**, mantendo o tracker atualizado para a entrega.
+
+[botar o print do issue tracker aqui]
+
+## Testes de Sistema Automatizados E2E
+* 🎥 **Screencast da execução dos testes** 
+[Link para o screencast do e2e](https://youtu.be/dGR5i2hcrdk?si=4ygCGreKUCRIj_9J)
+
+---
+
+## 🚀 Esteira de CI/CD (Integração e Deploy Contínuo)
+
+# 🚀 CI/CD e Testes Automatizados
+
+Este projeto utiliza uma pipeline de **CI/CD (Continuous Integration / Continuous Delivery)** para garantir qualidade, estabilidade e automação no processo de desenvolvimento e deploy.
+
+---
+
+# 🔄 Fluxo da Pipeline
+
+Sempre que ocorre um:
+
+- `push`
+- `pull request`
+- merge na branch principal
+
+a pipeline é executada automaticamente.
+
+```text
+Desenvolvedor faz push
+        ↓
+Pipeline inicia automaticamente
+        ↓
+Instala dependências
+        ↓
+Executa lint
+        ↓
+Executa testes
+        ↓
+Realiza build
+        ↓
+Deploy automático
+```
+
+---
+
+# ✅ Etapas Executadas
+
+## 1. Instalação de Dependências
+
+O ambiente é configurado automaticamente e todas as dependências do projeto são instaladas.
+
+### Exemplo
+
+```bash
+npm install
+```
+
+ou
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## 2. Lint e Qualidade de Código
+
+Ferramentas de análise estática são executadas para manter padronização e qualidade do código.
+
+### Ferramentas utilizadas
+
+- ESLint
+- Prettier
+- Flake8
+- SonarQube
+
+### Objetivos
+
+- evitar erros comuns
+- manter padrão de escrita
+- identificar problemas de segurança
+- reduzir código duplicado
+
+---
+
+## 3. Testes Automatizados
+
+Os testes garantem que as funcionalidades continuem funcionando corretamente após novas alterações.
+
+### 🧪 Testes Unitários
+
+Validam funções e componentes isoladamente.
+
+```bash
+npm test
+```
+
+ou
+
+```bash
+pytest
+```
+
+---
+
+### 🔗 Testes de Integração
+
+Garantem que diferentes partes do sistema funcionem corretamente juntas.
+
+### Exemplos
+
+- API + banco de dados
+- autenticação
+- serviços externos
+
+---
+
+## 4. Build da Aplicação
+
+Após os testes, o sistema realiza o build da aplicação para validar que tudo pode ser compilado corretamente.
+
+```bash
+npm run build
+```
+
+---
+
+## 5. Deploy Automático
+
+Se todas as etapas forem aprovadas, o deploy pode ser realizado automaticamente para:
+
+- desenvolvimento
+- homologação
+- produção
+
+---
+
+# 🛠 Tecnologias Utilizadas
+
+- GitHub Actions
+- Docker
+- Jest
+- Pytest
+- Vercel
+- AWS
+- Railway
+
+---
+
+# 🎯 Benefícios do CI/CD
+
+- Redução de bugs em produção
+- Feedback rápido sobre falhas
+- Melhor qualidade de código
+- Automatização do deploy
+- Maior segurança nas entregas
+- Integração contínua entre equipes
+
+---
+
+# 📌 Objetivo
+
+Garantir que toda alteração enviada ao repositório passe por validações automáticas antes de ser integrada ou publicada em produção.
+
+* 🎥 **Screencast do processo de CI/CD (Build, Testes e Deploy):** [botar o link do screen cas do processo do ci/cd]
+
+---
+
+## 🚀 Link do Deploy Atualizado
+- https://enertech-sq4i.onrender.com/
+
+---
+
+## Programação em Par exeperimentada: Relato Final 
+- Continuamos dividindo as tarefas individualmente para encaixar no horário de todo mundo e render mais. Porém, nesta reta final, o acompanhamento foi diário. O grupo se apoiou muito, revisando códigos e resolvendo juntos os problemas com os testes automatizados e o CI/CD. Conseguimos manter o foco individual, mas com o time todo alinhado no sistema completo.
+
+----
+
+## 📄 Instruções para Configuração do Ambiente Local
+As orientações para preparar a infraestrutura e configurar o ambiente local da aplicação estão detalhadas no arquivo de documentação complementar na raiz do projeto:
+
+Fazer o contributting(apagar esse texto depois)
+
+* 🔗 [CONTRIBUTING.md](./CONTRIBUTING.md)

@@ -12,12 +12,31 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <link rel="stylesheet" href="{% static 'css/override.css' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260518-f5">
+    <link rel="stylesheet" href="{% static 'css/override.css' %}?v=20260518-f6">
     {% block extra_css %}{% endblock %}
     {% block maplibre_css %}
     <link href='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css' rel='stylesheet' />
     {% endblock %}
+    <style>
+        /* FORÇA CSS - Barra de pesquisa em tema escuro */
+        #inputBusca,
+        .map-search-input {
+            background: #3a3d43 !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        }
+        #inputBusca::placeholder,
+        .map-search-input::placeholder {
+            color: #a1a1a6 !important;
+        }
+        #inputBusca:focus,
+        .map-search-input:focus {
+            background: #3a3d43 !important;
+            color: #ffffff !important;
+            border-color: #08c25f !important;
+        }
+    </style>
 </head>
 
 <body class="{% if user.is_authenticated %}logged{% endif %}{% block body_class %}{% endblock %}">
@@ -97,16 +116,6 @@
                 <span class="sb-nav-icon">🗺️</span>
                 <span>Mapa</span>
             </a>
-            {% if user.is_staff or user.is_superuser %}
-            <a href="#" class="sb-nav-link" onclick="abrirFormulario(); return false;">
-                <span class="sb-nav-icon">➕</span>
-                <span>Novo Ponto</span>
-            </a>
-            <a href="{% url 'admin_agendamentos' %}" class="sb-nav-link">
-                <span class="sb-nav-icon">📅</span>
-                <span>Agendamentos</span>
-            </a>
-            {% endif %}
         </nav>
 
         <div class="sb-footer">
@@ -163,6 +172,9 @@
             <a href="{% url 'login' %}" class="btn btn-primary desktop-auth-btn" style="padding: 8px 16px; font-size: 14px;">Entrar</a>
             <a href="{% url 'register' %}" class="btn btn-secondary desktop-auth-btn" style="padding: 8px 16px; font-size: 14px;">Criar conta</a>
             {% else %}
+            <a href="{% url 'meus_agendamentos_dashboard' %}" class="topbar-action topbar-action--secondary">
+                Meu dashboard
+            </a>
             {% block topbar_actions %}{% endblock %}
             {% endif %}
         </div>
@@ -220,10 +232,22 @@
 function toggleSidebar() {
     const sb = document.getElementById('sidebar');
     const ov = document.getElementById('sbOverlay');
-    if (!sb) return;
+    if (!sb) {
+        console.error('Sidebar element not found!');
+        return;
+    }
     const open = sb.classList.toggle('sb--open');
-    if (ov) ov.classList.toggle('sb--open', open);
+    console.log('Toggling sidebar. New state:', open ? 'OPEN' : 'CLOSED');
+    if (ov) {
+        ov.classList.toggle('sb--open', open);
+        console.log('Overlay toggled');
+    } else {
+        console.warn('Overlay element not found');
+    }
     document.body.classList.toggle('sb-no-scroll', open);
+    
+    // Força um reflow para garantir que a transição funciona
+    void sb.offsetWidth;
 }
 
 window.showToast = function(msg, type = 'info', duration = 3000) {

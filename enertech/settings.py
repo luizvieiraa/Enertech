@@ -7,6 +7,14 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def env_bool(name, default=False):
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
 try:
     import dj_database_url
 except ModuleNotFoundError:
@@ -23,14 +31,18 @@ except ModuleNotFoundError:
 # ================================
 SECRET_KEY = os.getenv('SECRET_KEY', 'fallback-dev-key')
 
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
+RENDER_EXTERNAL_URL = os.getenv('RENDER_EXTERNAL_URL', '').strip()
+IS_RENDER = bool(RENDER_EXTERNAL_URL)
+IS_PRODUCTION = env_bool('DJANGO_PRODUCTION', default=IS_RENDER)
+
+DEBUG = env_bool('DEBUG', default=not IS_RENDER)
 
 # Configurar ALLOWED_HOSTS para diferentes ambientes
-if os.getenv('RENDER_EXTERNAL_URL'):
+if RENDER_EXTERNAL_URL:
     # Em produção no Render
     ALLOWED_HOSTS = [
-        os.getenv('RENDER_EXTERNAL_URL').replace('https://', ''),
-        os.getenv('RENDER_EXTERNAL_URL').replace('http://', ''),
+        RENDER_EXTERNAL_URL.replace('https://', ''),
+        RENDER_EXTERNAL_URL.replace('http://', ''),
         '.onrender.com',
     ]
 else:
@@ -156,6 +168,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # ================================
 # LOGIN / LOGOUT
 # ================================
+LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'login'
 
@@ -168,7 +181,7 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
-SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SECURE = env_bool('SESSION_COOKIE_SECURE', default=IS_PRODUCTION and not DEBUG)
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 
@@ -176,7 +189,7 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 # ================================
 # CSRF / SEGURANÇA
 # ================================
-CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', default=IS_PRODUCTION and not DEBUG)
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_AGE = 31449600
 
@@ -185,11 +198,13 @@ CSRF_TRUSTED_ORIGINS = [
     'https://*.onrender.com',
     'http://localhost:8000',
     'http://127.0.0.1:8000',
+    'https://localhost:8000',
+    'https://127.0.0.1:8000',
 ]
 
 # Adicionar origem do Render se estiver em produção
-if os.getenv('RENDER_EXTERNAL_URL'):
-    render_url = os.getenv('RENDER_EXTERNAL_URL').replace('https://', '').replace('http://', '')
+if RENDER_EXTERNAL_URL:
+    render_url = RENDER_EXTERNAL_URL.replace('https://', '').replace('http://', '')
     CSRF_TRUSTED_ORIGINS.append(f'https://{render_url}')
     CSRF_TRUSTED_ORIGINS.append(f'http://{render_url}')
 
@@ -198,8 +213,10 @@ if os.getenv('CSRF_TRUSTED_ORIGINS'):
     custom_origins = os.getenv('CSRF_TRUSTED_ORIGINS').split(',')
     CSRF_TRUSTED_ORIGINS.extend([origin.strip() for origin in custom_origins if origin.strip()])
 
-# Configurações para HTTPS em produção
-if not DEBUG:
+# Configurações para HTTPS apenas em produção
+enable_ssl_redirect = IS_PRODUCTION and env_bool('SECURE_SSL_REDIRECT', default=True)
+
+if enable_ssl_redirect:
     SECURE_SSL_REDIRECT = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_BROWSER_XSS_FILTER = True

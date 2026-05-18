@@ -268,10 +268,22 @@ function buildPopupHtml(p) {
 /* ╚═════════════════════════════════════════╝ */
 
 function obterLocalizacaoUsuario() {
+    console.log('🔍 Iniciando solicitação de localização...');
+    
     if (!navigator.geolocation) {
-        console.warn('Geolocalização não suportada neste navegador');
+        console.error('❌ Geolocalização não suportada neste navegador');
+        // Fallback: usar localização padrão (Recife, PE - Brasil)
+        localizacaoUsuario = {
+            lat: -8.0476,
+            lng: -34.8770
+        };
+        console.log('📍 Usando localização padrão:', localizacaoUsuario);
+        adicionarMarkerLocalizacaoUsuario();
+        atualizarProximos();
         return;
     }
+
+    console.log('✅ Geolocalização disponível. Solicitando permissão...');
 
     navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -279,14 +291,37 @@ function obterLocalizacaoUsuario() {
                 lat: position.coords.latitude,
                 lng: position.coords.longitude
             };
-            console.log('📍 Localização obtida:', localizacaoUsuario);
+            console.log('✅ Localização obtida:', localizacaoUsuario);
             adicionarMarkerLocalizacaoUsuario();
             atualizarProximos();
         },
         (error) => {
-            console.warn('Erro ao obter localização:', error.message);
+            console.error('❌ Erro ao obter localização:', error.code, error.message);
+            // Códigos de erro: 1=Permissão negada, 2=Posição indisponível, 3=Timeout
+            
+            if (error.code === 1) {
+                console.warn('⚠️ Permissão de localização foi NEGADA pelo usuário');
+                showToast('📍 Permita acesso à sua localização para ver eletropostos próximos', 'info');
+            } else if (error.code === 2) {
+                console.warn('⚠️ Posição do dispositivo indisponível');
+            } else if (error.code === 3) {
+                console.warn('⚠️ Timeout ao obter localização');
+            }
+            
+            // Fallback: usar localização padrão
+            localizacaoUsuario = {
+                lat: -8.0476,
+                lng: -34.8770
+            };
+            console.log('📍 Usando localização padrão (Recife):', localizacaoUsuario);
+            adicionarMarkerLocalizacaoUsuario();
+            atualizarProximos();
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        { 
+            enableHighAccuracy: true, 
+            timeout: 15000, 
+            maximumAge: 0 
+        }
     );
 }
 
@@ -358,34 +393,48 @@ function atualizarProximos() {
     const box = document.getElementById('proximosBox');
     const lista = document.getElementById('proximosLista');
     
-    if (!box || !lista) return;
-    
-    if (!localizacaoUsuario) {
-        box.style.display = 'none';
+    if (!box || !lista) {
+        console.error('proximosBox ou proximosLista não encontrados');
         return;
     }
+
+    console.log('Atualizando próximos. Localização do usuário:', localizacaoUsuario);
 
     // Obter a distância configurada no filtro
     const distanciaInput = document.getElementById('inputDistancia');
     const distanciaMaxima = distanciaInput ? parseInt(distanciaInput.value) : 10;
 
-    // Filtrar eletropostos dentro da distância APLICANDO OS FILTROS DA SIDEBAR
+    // Filtrar eletropostos
     const filtrados = getPontosFiltrados();
-    const proximos = filtrados
-        .map((p) => ({
-            ...p,
-            distancia: calcularDistancia(
-                localizacaoUsuario.lat, 
-                localizacaoUsuario.lng, 
-                p.lat, 
-                p.lng
-            )
-        }))
-        .filter((p) => p.distancia <= distanciaMaxima)
-        .sort((a, b) => a.distancia - b.distancia);
+    console.log('Pontos filtrados:', filtrados.length);
+
+    let proximos = [];
+    
+    if (localizacaoUsuario) {
+        // Se tem localização, mostrar os mais próximos
+        proximos = filtrados
+            .map((p) => ({
+                ...p,
+                distancia: calcularDistancia(
+                    localizacaoUsuario.lat, 
+                    localizacaoUsuario.lng, 
+                    p.lat, 
+                    p.lng
+                )
+            }))
+            .filter((p) => p.distancia <= distanciaMaxima)
+            .sort((a, b) => a.distancia - b.distancia);
+    } else {
+        // Se não tem localização, mostrar os primeiros 10 pontos filtrados
+        console.warn('Localização do usuário não disponível. Mostrando todos os pontos.');
+        proximos = filtrados.slice(0, 10);
+    }
 
     if (proximos.length === 0) {
-        lista.innerHTML = `<div class="proximos-empty">Nenhum eletroposto a ${distanciaMaxima}km de você</div>`;
+        const msg = localizacaoUsuario 
+            ? `Nenhum eletroposto a ${distanciaMaxima}km de você`
+            : 'Nenhum eletroposto disponível';
+        lista.innerHTML = `<div class="proximos-empty">${msg}</div>`;
         box.style.display = 'flex';
         return;
     }
@@ -394,27 +443,36 @@ function atualizarProximos() {
         .map((p) => {
             const livres = p.vagas_livres ?? 0;
             const status = livres > 0 ? '🟢' : '🔴';
-            const distanceStr = p.distancia >= 1 
-                ? `${p.distancia.toFixed(1)}km` 
-                : `${Math.round(p.distancia * 1000)}m`;
+            const distanceStr = p.distancia !== undefined
+                ? (p.distancia >= 1 
+                    ? `${p.distancia.toFixed(1)}km` 
+                    : `${Math.round(p.distancia * 1000)}m`)
+                : '';
             
             return `
                 <div class="proximos-item" onclick="focarPonto(${p.lat}, ${p.lng}, ${p.id}); abrirSidebarDetalhes(${p.id});">
                     <div class="proximos-item-name">${p.nome}</div>
                     <div class="proximos-item-info">
                         <span>${status} ${livres} vaga${livres !== 1 ? 's' : ''}</span>
-                        <span>📍 ${distanceStr}</span>
+                        ${distanceStr ? `<span>📍 ${distanceStr}</span>` : ''}
                     </div>
                 </div>`;
         })
         .join('');
 
+    console.log('Próximos exibidos:', proximos.length);
     box.style.display = 'flex';
 }
 
 function fecharProximos() {
     const box = document.getElementById('proximosBox');
     if (box) box.style.display = 'none';
+}
+
+function solicitarLocalizacaoNovamente() {
+    console.log('🔄 Solicitando localização novamente...');
+    localizacaoUsuario = null;
+    obterLocalizacaoUsuario();
 }
 
 function buildConectoresListHtml(conectores) {
@@ -1063,53 +1121,73 @@ function abrirSidebarDetalhes(pontoId) {
         : `🔴 Fechado. Abre às ${abremEm}`;
     
     let conteudo = `
-        <div class="detalhe-section">
-            <div class="detalhe-label">Status Operacional</div>
-            <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: ${estaAberto ? 'rgba(0, 230, 118, 0.1)' : 'rgba(255, 107, 107, 0.1)'}; border-radius: 6px; border: 1px solid ${estaAberto ? 'rgba(0, 230, 118, 0.3)' : 'rgba(255, 107, 107, 0.3)'};">
-                <span style="font-size: 16px;">${estaAberto ? '🟢' : '🔴'}</span>
-                <div>
-                    <div style="font-weight: 600; color: ${corHorario};">${estaAberto ? 'Aberto' : 'Fechado'}</div>
-                    <div style="font-size: 12px; color: #94a3b8;">Funciona de ${abremEm} às ${fechamEm}</div>
-                </div>
+        <div class="detalhe-premium-hero ${estaAberto ? 'is-open' : 'is-closed'}">
+            <div class="detalhe-premium-kicker">Eletroposto</div>
+            <div class="detalhe-premium-title">${ponto.nome}</div>
+            <div class="detalhe-premium-meta">
+                <span class="detalhe-premium-pill ${estaAberto ? 'is-open' : 'is-closed'}">${estaAberto ? 'Aberto agora' : 'Fechado'}</span>
+                <span>${estaAberto ? `Até ${fechamEm}` : `Abre às ${abremEm}`}</span>
             </div>
         </div>
 
-        <div class="detalhe-section">
+        <div class="detalhe-premium-grid">
+            <div class="detalhe-premium-stat ${ponto.vagas_livres > 0 ? 'is-available' : 'is-full'}">
+                <div class="detalhe-premium-stat-label">Vagas</div>
+                <div class="detalhe-premium-stat-value">${ponto.vagas_livres}/${ponto.total_vagas}</div>
+                <div class="detalhe-premium-stat-sub">${ponto.vagas_livres > 0 ? 'Disponíveis' : 'Ocupadas'}</div>
+            </div>
+            <div class="detalhe-premium-stat">
+                <div class="detalhe-premium-stat-label">Potência</div>
+                <div class="detalhe-premium-stat-value">${ponto.consumo}</div>
+                <div class="detalhe-premium-stat-sub">kW max.</div>
+            </div>
+        </div>
+
+        <div class="detalhe-section detalhe-section--hero detalhe-section--operational">
+            <div class="detalhe-label">Status Operacional</div>
+            <div class="detalhe-hero-card ${estaAberto ? 'is-open' : 'is-closed'}">
+                <div class="detalhe-hero-title">${estaAberto ? 'Aberto' : 'Fechado'}</div>
+                <div class="detalhe-hero-subtitle">${estaAberto ? `Funciona até ${fechamEm}` : `Abre às ${abremEm}`}</div>
+            </div>
+        </div>
+
+        <div class="detalhe-section detalhe-section--hero">
             <div class="detalhe-label">Status de Disponibilidade</div>
-            <div class="detalhe-status ${ponto.vagas_livres > 0 ? 'livre' : 'ocupado'}">
-                ${ponto.vagas_livres > 0 ? '🟢' : '🔴'}
-                ${ponto.vagas_livres > 0 
-                    ? `${ponto.vagas_livres} de ${ponto.total_vagas} vaga${ponto.total_vagas !== 1 ? 's' : ''} livre${ponto.vagas_livres !== 1 ? 's' : ''}` 
-                    : `Todas as ${ponto.total_vagas} vaga${ponto.total_vagas !== 1 ? 's' : ''} ocupadas`}
+            <div class="detalhe-hero-card ${ponto.vagas_livres > 0 ? 'is-available' : 'is-full'}">
+                <div class="detalhe-hero-title">
+                    ${ponto.vagas_livres > 0 ? `${ponto.vagas_livres} vagas livres` : 'Sem vagas livres'}
+                </div>
+                <div class="detalhe-hero-subtitle">
+                    ${ponto.vagas_livres > 0 
+                        ? `${ponto.vagas_livres} de ${ponto.total_vagas} vaga${ponto.total_vagas !== 1 ? 's' : ''} disponíveis`
+                        : `Todas as ${ponto.total_vagas} vaga${ponto.total_vagas !== 1 ? 's' : ''} ocupadas`}
+                </div>
             </div>
         </div>
 
         ${ponto.ocupado ? `
-        <div class="detalhe-section">
+        <div class="detalhe-section detalhe-section--hero">
             <div class="detalhe-label">Status de Ocupação</div>
-            <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: rgba(255, 107, 107, 0.1); border-radius: 6px; border: 1px solid rgba(255, 107, 107, 0.3);">
-                <span style="font-size: 16px;">🔴</span>
-                <div>
-                    <div style="font-weight: 600; color: #ff6b6b;">Em Andamento</div>
-                    <div style="font-size: 12px; color: #94a3b8;">${ponto.status_ocupacao}</div>
-                </div>
+            <div class="detalhe-hero-card is-occupied">
+                <div class="detalhe-hero-title">Em andamento</div>
+                <div class="detalhe-hero-subtitle">${ponto.status_ocupacao}</div>
             </div>
         </div>
         ` : ''}
 
-        <div class="detalhe-section">
+        <div class="detalhe-section detalhe-section--rating">
             <div class="detalhe-label">Avaliação</div>
-            <div style="display: flex; align-items: center; gap: 8px;">
+            <div class="detalhe-rating-row">
                 ${ponto.media 
-                    ? `<span style="font-size: 18px; color: var(--warning);">${'★'.repeat(Math.round(ponto.media))}${'☆'.repeat(5 - Math.round(ponto.media))}</span>
-                       <span style="color: var(--text-secondary); font-size: 13px;">${ponto.media} de 5 · ${ponto.total_aval} avaliação${ponto.total_aval !== 1 ? 'ões' : ''}</span>`
-                    : `<span style="color: var(--text-muted); font-size: 13px;">Sem avaliações ainda</span>`}
+                    ? `<span class="detalhe-rating-stars">${'★'.repeat(Math.round(ponto.media))}${'☆'.repeat(5 - Math.round(ponto.media))}</span>
+                       <span class="detalhe-rating-text">${ponto.media} de 5 · ${ponto.total_aval} avaliação${ponto.total_aval !== 1 ? 'ões' : ''}</span>`
+                    : `<span class="detalhe-rating-text">Sem avaliações ainda</span>`}
             </div>
         </div>
 
         <div class="detalhe-section">
             <div class="detalhe-label">Localização</div>
-            <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+            <div class="detalhe-location">
                 <div><strong>Latitude:</strong> ${ponto.lat.toFixed(6)}</div>
                 <div><strong>Longitude:</strong> ${ponto.lng.toFixed(6)}</div>
             </div>
@@ -1161,24 +1239,21 @@ function abrirSidebarDetalhes(pontoId) {
         </div>
 
         <div class="detalhe-btn-group">
-            <button class="detalhe-btn" onclick="focarPonto(${ponto.lat}, ${ponto.lng}, ${ponto.id})">
+            <button class="detalhe-btn detalhe-btn--primary" onclick="focarPonto(${ponto.lat}, ${ponto.lng}, ${ponto.id})">
                 📍 Focar no Mapa
             </button>
             ${estaAberto
-                ? `<button class="detalhe-btn" onclick="abrirAgendamento(${ponto.id})">
+                ? `<button class="detalhe-btn detalhe-btn--accent" onclick="abrirAgendamento(${ponto.id})">
                     📅 Agendar
                   </button>`
-                : `<button class="detalhe-btn" disabled style="opacity: 0.6; cursor: not-allowed; background: rgba(100, 100, 100, 0.1);">
+                : `<button class="detalhe-btn detalhe-btn--disabled" disabled>
                     🔒 Fechado
                   </button>`
             }
-            <button class="detalhe-btn" onclick="abrirAvaliacao(${ponto.id})">
+            <button class="detalhe-btn detalhe-btn--secondary" onclick="abrirAvaliacao(${ponto.id})">
                 ⭐ Avaliar
             </button>
-        </div>
-
-        <div style="margin-top: 12px;">
-            <a href="https://www.google.com/maps/dir/?api=1&destination=${ponto.lat},${ponto.lng}&travelmode=driving" target="_blank" rel="noopener" class="detalhe-btn" style="display: block; text-align: center; text-decoration: none;">
+            <a href="https://www.google.com/maps/dir/?api=1&destination=${ponto.lat},${ponto.lng}&travelmode=driving" target="_blank" rel="noopener" class="detalhe-btn detalhe-btn--maps">
                 🗺️ Abrir no Google Maps
             </a>
         </div>
