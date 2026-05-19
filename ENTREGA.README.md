@@ -381,7 +381,7 @@ Se todas as etapas forem aprovadas, o deploy pode ser realizado automaticamente 
 
 Garantir que toda alteração enviada ao repositório passe por validações automáticas antes de ser integrada ou publicada em produção.
 
-* 🎥 **Screencast do processo de CI/CD (Build, Testes e Deploy):** [botar o link do screen cas do processo do ci/cd]
+* 🎥 **Screencast do processo de CI/CD (Build, Testes e Deploy):** [https://youtu.be/jUmGOmFH7u0?si=1Rri_9Vg4s_tBlx0]
 
 ---
 
