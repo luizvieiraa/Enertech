@@ -398,6 +398,4 @@ Garantir que toda alteração enviada ao repositório passe por validações aut
 ## 📄 Instruções para Configuração do Ambiente Local
 As orientações para preparar a infraestrutura e configurar o ambiente local da aplicação estão detalhadas no arquivo de documentação complementar na raiz do projeto:
 
-Fazer o contributting(apagar esse texto depois)
-
 * 🔗 [CONTRIBUTING.md](./CONTRIBUTING.md)
