@@ -218,7 +218,7 @@ Finalizar as histórias que faltam do backlog do projeto e implementar a automa�
 * continuamos com commits semanais na branch principal, destacando as evoluções
 * Eventuais falhas e tarefas pontuais do projeto foram centralizadas diretamente na aba de **Issues do GitHub**, mantendo o tracker atualizado para a entrega.
 
-[Print Issues/Bug Tracker]()
+[Print Issues/Bug Tracker](https://github.com/user-attachments/assets/62006aaf-24fe-43b6-b574-71800f9c13cb)
 
 ## Testes de Sistema Automatizados E2E
 * 🎥 **Screencast da execução dos testes** 
