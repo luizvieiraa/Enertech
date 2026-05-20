@@ -202,7 +202,7 @@ Finalizar as histórias que faltam do backlog do projeto e implementar a automa�
 ## 📌 Quadro da Sprint 4
 * **Sprint 4:** Finalização do Backlog
 
-[botar o print do quadro da sprint 4]
+[Print do Quadro da Sprint 4](https://github.com/user-attachments/assets/e110c9f2-36b9-4235-bb26-d09f2f75e214) 
 
 ### Histórias finais adicionadas:
 * SCRUM-7: Login inválido
