@@ -14,6 +14,7 @@ Siga esses passos sempre que for atualizar o código:
 ### Regra das Branches (Git)
 Para não bagunçar o código principal, nunca envie alterações direto na `main`. Crie sempre uma branch separada usando esses padrões:
 * Se for criar algo novo: `git checkout -b feature/SCRUM-[Número do card]-[nome da tarefa]`
+  
 * Se for corrigir um bug: `git checkout -b bugfix/issue-[Número da issue]-[nome do bug]`
 
 Sempre faça commits semanais para registrar o andar do projeto.
@@ -46,5 +47,9 @@ python manage.py migrate
 
 # 6. Ligue o servidor do site
 python manage.py runserver
+```
+
+## Declaração final:
+* Depois de seguir todas essas instruções corretamente, você estará apto a colaborar com o projeto!⚡
 
 
