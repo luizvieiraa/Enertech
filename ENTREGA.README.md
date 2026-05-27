@@ -208,8 +208,6 @@ Finalizar as histórias que faltam do backlog do projeto e implementar a automa�
 * SCRUM-7: Login inválido
 * SCRUM-8: Ranking de eletropostos
 
-* 🎥 **Screencast com ênfase nas novas histórias**[botar o link do screencast das novas historias aqui(a URL tem que aparecer no screencast)]
-
 ## 📋 Backlog Finalizado
 
 [Print do Backlog](https://github.com/user-attachments/assets/dcf491c4-161d-485b-951a-061b7b1fa12f)
