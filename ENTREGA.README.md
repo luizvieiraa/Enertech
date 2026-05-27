@@ -212,7 +212,7 @@ Finalizar as histórias que faltam do backlog do projeto e implementar a automa�
 
 ## 📋 Backlog Finalizado
 
-[Print do Backlog](/attachments/cdLD7MeVEX9aivSF5yB7p.png)
+[Print do Backlog](https://github.com/user-attachments/assets/dcf491c4-161d-485b-951a-061b7b1fa12f)
 
 ## 🔗 Repositório, Versionamento e Issue Tracker
 * continuamos com commits semanais na branch principal, destacando as evoluções
