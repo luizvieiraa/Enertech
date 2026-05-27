@@ -212,7 +212,7 @@ Finalizar as histórias que faltam do backlog do projeto e implementar a automa�
 
 ## 📋 Backlog Finalizado
 
-[Print do Backlog](<img width="1439" height="674" alt="Captura de Tela 2026-05-27 às 17 24 35" src="https://github.com/user-attachments/assets/ca05bea2-0864-4875-a344-1a15a80eff47" />)
+[Print do Backlog](/attachments/cdLD7MeVEX9aivSF5yB7p.png)
 
 ## 🔗 Repositório, Versionamento e Issue Tracker
 * continuamos com commits semanais na branch principal, destacando as evoluções
